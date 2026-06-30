@@ -188,17 +188,12 @@ function getNovelText(id) {
 }
 
 function getImageBase64(imageUrl) {
+    const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
     try {
-        const response = UrlFetchApp.fetch(imageUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://www.pixiv.net/'
-            },
-            muteHttpExceptions: true
-        });
+        const response = UrlFetchApp.fetch(`${baseUrl}/api?type=image&url=${encodeURIComponent(imageUrl)}`, { muteHttpExceptions: true });
         const code = response.getResponseCode();
         if (code >= 400) {
-            return JSON.stringify({ error: `Pixiv error ${code}` });
+            return JSON.stringify({ error: `Vercel error ${code}` });
         }
         const blob = response.getBlob();
         const base64 = Utilities.base64Encode(blob.getBytes());
