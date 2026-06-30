@@ -98,23 +98,18 @@ export default async function handler(req, res) {
             const response = await axios.get(`https://www.pixiv.net/ajax/top/illust?mode=all`, {
                 headers: webApiHeaders
             });
-            const ids = response.data.body?.page?.recommend?.ids || [];
-            const details = response.data.body?.page?.recommend?.details || {};
-            const illusts = ids.map(id => {
-                const item = details[id];
-                if (!item) return null;
-                return {
-                    id: item.id,
-                    title: item.title,
-                    x_restrict: item.xRestrict,
-                    user: { id: item.userId, name: item.userName },
-                    image_urls: {
-                        square_medium: item.url,
-                        large: item.url
-                    },
-                    caption: item.description || ''
-                };
-            }).filter(item => item !== null);
+            const rawData = response.data.body?.thumbnails?.illust || [];
+            const illusts = rawData.map(item => ({
+                id: item.id,
+                title: item.title,
+                x_restrict: item.xRestrict,
+                user: { id: item.userId, name: item.userName },
+                image_urls: {
+                    square_medium: item.url,
+                    large: item.url
+                },
+                caption: item.description || ''
+            }));
             return res.status(200).json({ illusts });
         }
 
