@@ -1,0 +1,13 @@
+{
+    "version": 2,
+    "routes": [
+        {
+            "source": "/api",
+            "dest": "/api/index.js"
+        },
+        {
+            "source": "/(.*)",
+            "dest": "/public/$1"
+        }
+    ]
+}

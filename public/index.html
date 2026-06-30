@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pixiv Portal</title>
+    <style>
+        :root {
+            --pixiv-blue: #0096ff;
+            --bg-color: #f4f7f9;
+            --card-bg: #ffffff;
+            --text-main: #1f1f1f;
+            --text-sub: #7a8b9a;
+            --border: #e5e9ef;
+            --r18-red: #ff4d4f;
+            --fav-orange: #ff9900;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 22px;
+            color: var(--pixiv-blue);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 20px;
+        }
+
+        select,
+        input,
+        button {
+            padding: 10px 14px;
+            border: 1px solid #ccd5e0;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input {
+            flex: 1;
+        }
+
+        button {
+            background: var(--pixiv-blue);
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #007ed6;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 12px;
+        }
+
+        .tab-btn {
+            background: #e5e9ef;
+            color: var(--text-main);
+            font-size: 13px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: normal;
+            cursor: pointer;
+            border: none;
+        }
+
+        .tab-btn:hover {
+            background: #ccd5e0;
+        }
+
+        .tab-btn.active {
+            background: var(--pixiv-blue);
+            color: white;
+            font-weight: bold;
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 24px auto;
+            padding: 0 16px;
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--pixiv-blue);
+            font-weight: bold;
+            display: none;
+            margin: 40px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .item-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .item-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .thumb-box {
+            width: 100%;
+            aspect-ratio: 1/1;
+            background: #eee;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .thumb-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .item-info {
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .item-title {
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+
+        .item-author {
+            color: var(--text-sub);
+            font-size: 11px;
+        }
+
+        .badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: var(--r18-red);
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+
+        .novel-tag {
+            background: #52c41a;
+        }
+
+        .detail-view {
+            max-width: 800px;
+            margin: 0 auto;
+            display: none;
+        }
+
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .back-btn {
+            background: #666;
+        }
+
+        .fav-btn {
+            background: var(--fav-orange);
+        }
+
+        .fav-btn.is-fav {
+            background: #999;
+        }
+
+        .view-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 32px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+
+        .novel-body {
+            font-size: 16px;
+            line-height: 2.3;
+            white-space: pre-wrap;
+            letter-spacing: 0.05em;
+        }
+
+        .big-img {
+            text-align: center;
+        }
+
+        .big-img img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            border-left: 4px solid var(--pixiv-blue);
+            padding-left: 8px;
+        }
+
+        .list-box {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .list-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-item:hover {
+            background: #f8f9fa;
+        }
+
+        .delete-small {
+            background: #ff4d4f;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <a class="logo" onclick="switchTab('search')">pixiv</a>
+        <div class="search-bar">
+            <select id="searchType">
+                <option value="illust">イラスト</option>
+                <option value="novel">小説</option>
+            </select>
+            <input type="text" id="queryInput" placeholder="キーワードを入力...">
+            <button onclick="startSearch()">検索</button>
+        </div>
+        <div class="nav-tabs">
+            <button class="tab-btn active" id="tab-search" onclick="switchTab('search')">検索一覧</button>
+            <button class="tab-btn" id="tab-fav" onclick="switchTab('fav')">★ お気に入り</button>
+            <button class="tab-btn" id="tab-history" onclick="switchTab('history')">🕒 履歴</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div id="loading" class="loading">🔒 制限コンテンツを安全にデコード中...</div>
+
+        <div id="searchView">
+            <div class="grid" id="resultGrid"></div>
+        </div>
+        <div id="favView" style="display:none;">
+            <div class="section-title">★ お気に入り作品一覧</div>
+            <div class="grid" id="favGrid"></div>
+        </div>
+        <div id="historyView" style="display:none;">
+            <div class="section-title">🕒 最近検索したキーワード</div>
+            <div class="list-box" id="searchHistoryList"></div>
+            <div class="section-title">🕒 最近閲覧した作品</div>
+            <div class="grid" id="readHistoryGrid"></div>
+        </div>
+
+        <div id="detailView" class="detail-view">
+            <div class="action-bar">
+                <button class="back-btn" onclick="goBack()">← 戻る</button>
+                <button class="fav-btn" id="favActionBtn" onclick="toggleFavorite()">★ お気に入りに追加</button>
+            </div>
+            <div id="detailContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = window.location.href.split('?')[0];
+        let currentType = 'illust', currentItem = null, previousView = 'search';
+
+        window.onload = function () {
+            if (!localStorage.getItem('pixiv_favs')) localStorage.setItem('pixiv_favs', JSON.stringify([]));
+            if (!localStorage.getItem('search_history')) localStorage.setItem('search_history', JSON.stringify([]));
+            if (!localStorage.getItem('read_history')) localStorage.setItem('read_history', JSON.stringify([]));
+        };
+
+        function switchTab(viewName) {
+            document.getElementById('searchView').style.display = viewName === 'search' ? 'block' : 'none';
+            document.getElementById('favView').style.display = viewName === 'fav' ? 'block' : 'none';
+            document.getElementById('historyView').style.display = viewName === 'history' ? 'block' : 'none';
+            document.getElementById('detailView').style.display = 'none';
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${viewName}`).classList.add('active');
+            if (viewName === 'fav') renderFavorites();
+            if (viewName === 'history') renderHistory();
+        }
+
+        function goBack() { document.getElementById('detailView').style.display = 'none'; switchTab(previousView); }
+
+        async function startSearch(forcedWord = null) {
+            switchTab('search'); previousView = 'search';
+            const type = document.getElementById('searchType').value;
+            const word = forcedWord || document.getElementById('queryInput').value.trim();
+            if (forcedWord) document.getElementById('queryInput').value = forcedWord;
+            const grid = document.getElementById('resultGrid'), loading = document.getElementById('loading');
+
+            if (!word) return alert('検索ワードを入力してください');
+            currentType = type; grid.innerHTML = ''; loading.style.display = 'block';
+            saveSearchHistory(word, type);
+
+            try {
+                const apiType = type === 'illust' ? 'search_illust' : 'search_novel';
+                const res = await fetch(`${GAS_URL}?type=search&apiType=${apiType}&word=${encodeURIComponent(word)}`);
+                const data = await res.json();
+                const items = type === 'illust' ? data.illusts : data.novels;
+                if (!items || items.length === 0) { grid.innerHTML = '<p>作品が見つかりませんでした。</p>'; return; }
+                renderGridItems(items, grid, type);
+            } catch (err) { grid.innerHTML = `<p style="color:red;">エラー: ${err.message}</p>`; } finally { loading.style.display = 'none'; }
+        }
+
+        function renderGridItems(items, targetGrid, type) {
+            targetGrid.innerHTML = '';
+            items.forEach(item => {
+                const card = document.createElement('div'); card.className = 'item-card';
+                let badgeHtml = '';
+                if (item.x_restrict === 1) badgeHtml = '<div class="badge">R-18</div>';
+                if (type === 'novel' || item._type === 'novel') badgeHtml += '<div class="badge novel-tag" style="left:50px;">小説</div>';
+                const origThumb = (type === 'illust' || item._type === 'illust') ? item.image_urls.square_medium : item.image_urls.large;
+                const proxyThumb = `${GAS_URL}?type=image&url=${encodeURIComponent(origThumb)}`;
+                card.innerHTML = `${badgeHtml}<div class="thumb-box"><img src="${proxyThumb}" loading="lazy"></div><div class="item-info"><div class="item-title">${item.title}</div><div class="item-author">by ${item.user.name}</div></div>`;
+                card.onclick = () => openDetail(item, item._type || type);
+                targetGrid.appendChild(card);
+            });
+        }
+
+        async function openDetail(item, type) {
+            if (document.getElementById('searchView').style.display === 'block') previousView = 'search';
+            else if (document.getElementById('favView').style.display === 'block') previousView = 'fav';
+            else if (document.getElementById('historyView').style.display === 'block') previousView = 'history';
+            document.getElementById('searchView').style.display = 'none'; document.getElementById('favView').style.display = 'none'; document.getElementById('historyView').style.display = 'none';
+            const detailView = document.getElementById('detailView'), content = document.getElementById('detailContent'), loading = document.getElementById('loading');
+            detailView.style.display = 'block'; content.innerHTML = '';
+            currentItem = item; currentItem._type = type; currentType = type;
+            updateFavButtonState(); saveReadHistory(item, type);
+
+            if (type === 'illust') {
+                const bigImgUrl = item.meta_single_page.original_image_url || item.image_urls.large;
+                const proxyBigUrl = `${GAS_URL}?type=image&url=${encodeURIComponent(bigImgUrl)}`;
+                content.innerHTML = `<div class="view-card big-img"><h1>${item.title}</h1><p style="color:var(--text-sub)">ユーザー: ${item.user.name}</p><img src="${proxyBigUrl}" referrerpolicy="no-referrer"><p style="text-align:left; white-space:pre-wrap; margin-top:20px;">${item.caption}</p></div>`;
+            } else {
+                loading.style.display = 'block';
+                try {
+                    const res = await fetch(`${GAS_URL}?type=novel_body&id=${item.id}`);
+                    const data = await res.json();
+                    content.innerHTML = `<div class="view-card"><h1>${item.title}</h1><p style="color:var(--text-sub)">著者: ${item.user.name}</p><hr style="border:0; border-top:1px solid var(--border); margin:20px 0;"><div class="novel-body">${data.novel_text}</div></div>`;
+                } catch (err) { content.innerHTML = `<p style="color:red;">本文の読み込みに失敗しました。</p>`; } finally { loading.style.display = 'none'; }
+            }
+        }
+
+        function getFavs() { return JSON.parse(localStorage.getItem('pixiv_favs')) || []; }
+        function updateFavButtonState() {
+            const favs = getFavs(), isFav = favs.some(f => f.id === currentItem.id && f._type === currentItem._type), btn = document.getElementById('favActionBtn');
+            if (isFav) { btn.innerText = '★ お気に入りを解除'; btn.classList.add('is-fav'); } else { btn.innerText = '★ お気に入りに追加'; btn.classList.remove('is-fav'); }
+        }
+        function toggleFavorite() {
+            let favs = getFavs(); const index = favs.findIndex(f => f.id === currentItem.id && f._type === currentItem._type);
+            if (index > -1) favs.splice(index, 1); else favs.unshift(currentItem);
+            localStorage.setItem('pixiv_favs', JSON.stringify(favs)); updateFavButtonState();
+        }
+        function renderFavorites() { renderGridItems(getFavs(), document.getElementById('favGrid'), 'fav'); }
+
+        function saveSearchHistory(word, type) {
+            let history = JSON.parse(localStorage.getItem('search_history')) || []; history = history.filter(h => !(h.word === word && h.type === type));
+            history.unshift({ word, type }); if (history.length > 20) history.pop(); localStorage.setItem('search_history', JSON.stringify(history));
+        }
+        function saveReadHistory(item, type) {
+            let history = JSON.parse(localStorage.getItem('read_history')) || []; history = history.filter(h => !(h.id === item.id && h._type === type));
+            item._type = type; history.unshift(item); if (history.length > 30) history.pop(); localStorage.setItem('read_history', JSON.stringify(history));
+        }
+        function renderHistory() {
+            const searchList = document.getElementById('searchHistoryList'), sHistory = JSON.parse(localStorage.getItem('search_history')) || [];
+            if (sHistory.length === 0) { searchList.innerHTML = '<p style="color:var(--text-sub); font-size:13px; margin:0;">履歴はありません。</p>'; }
+            else {
+                searchList.innerHTML = '';
+                sHistory.forEach(h => {
+                    const div = document.createElement('div'); div.className = 'list-item';
+                    div.innerHTML = `<span>[${h.type === 'illust' ? 'イラスト' : '小説'}] <strong>${h.word}</strong></span><button class="delete-small" onclick="event.stopPropagation(); deleteSearchHistory('${h.word}','${h.type}')">削除</button>`;
+                    div.onclick = () => { document.getElementById('searchType').value = h.type; startSearch(h.word); };
+                    searchList.appendChild(div);
+                });
+            }
+            renderGridItems(JSON.parse(localStorage.getItem('read_history')) || [], document.getElementById('readHistoryGrid'), 'history');
+        }
+        function deleteSearchHistory(word, type) {
+            let history = JSON.parse(localStorage.getItem('search_history')) || []; history = history.filter(h => !(h.word === word && h.type === type));
+            localStorage.setItem('search_history', JSON.stringify(history)); renderHistory();
+        }
+    </script>
+</body>
+
+</html>
