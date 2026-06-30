@@ -371,7 +371,7 @@
                     query.set('id', params.id);
                 } else if (params.action === 'image') {
                     query.set('type', 'image');
-                    query.set('url', params.url);
+                    query.set('url', params.url || '');
                 }
                 return `${GAS_URL}?${query.toString()}`;
             } else {
@@ -388,7 +388,7 @@
                     query.set('id', params.id);
                 } else if (params.action === 'image') {
                     query.set('type', 'image');
-                    query.set('url', params.url);
+                    query.set('url', params.url || '');
                 }
                 return `/api?${query.toString()}`;
             }
@@ -478,8 +478,8 @@
                 let badgeHtml = '';
                 if (item.x_restrict === 1) badgeHtml = '<div class="badge">R-18</div>';
                 if (type === 'novel' || item._type === 'novel') badgeHtml += '<div class="badge novel-tag" style="left:50px;">小説</div>';
-                const origThumb = (type === 'illust' || item._type === 'illust') ? item.image_urls.square_medium : item.image_urls.large;
-                const proxyThumb = getApiUrl({ action: 'image', url: origThumb });
+                const origThumb = (type === 'illust' || item._type === 'illust') ? item?.image_urls?.square_medium : item?.image_urls?.large;
+                const proxyThumb = getApiUrl({ action: 'image', url: origThumb || '' });
                 card.innerHTML = `${badgeHtml}<div class="thumb-box"><img src="${proxyThumb}" loading="lazy"></div><div class="item-info"><div class="item-title">${item.title}</div><div class="item-author">by ${item.user.name}</div></div>`;
                 card.onclick = () => openDetail(item, item._type || type);
                 targetGrid.appendChild(card);
@@ -497,8 +497,8 @@
             updateFavButtonState(); saveReadHistory(item, type);
 
             if (type === 'illust') {
-                const bigImgUrl = item.meta_single_page.original_image_url || item.image_urls.large;
-                const proxyBigUrl = getApiUrl({ action: 'image', url: bigImgUrl });
+                const bigImgUrl = item?.meta_single_page?.original_image_url || item?.image_urls?.large;
+                const proxyBigUrl = getApiUrl({ action: 'image', url: bigImgUrl || '' });
                 content.innerHTML = `<div class="view-card big-img"><h1>${item.title}</h1><p style="color:var(--text-sub)">ユーザー: ${item.user.name}</p><img src="${proxyBigUrl}" referrerpolicy="no-referrer"><p style="text-align:left; white-space:pre-wrap; margin-top:20px;">${item.caption}</p></div>`;
             } else {
                 loading.style.display = 'block';

@@ -130,7 +130,7 @@ export default async function handler(req, res) {
 
         // 6. 画像バイナリ中継
         if (type === 'image') {
-            if (!url) return res.status(400).json({ error: 'url パラメータが必要です。' });
+            if (!url || url === 'undefined' || url === '') return res.status(400).json({ error: 'url パラメータが必要です。' });
             const response = await axios.get(url, {
                 headers: {
                     'User-Agent': webApiHeaders['User-Agent'],
