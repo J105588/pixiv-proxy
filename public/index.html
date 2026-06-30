@@ -300,6 +300,51 @@
         .author-link:hover {
             text-decoration: underline;
         }
+        
+        /* サブタブ (即時切り替えタブ) のスタイル */
+        .sub-tabs-container {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+        .sub-tab {
+            cursor: pointer;
+            padding: 8px 16px;
+            font-weight: bold;
+            color: var(--text-sub);
+            position: relative;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        .sub-tab:hover {
+            color: var(--text-main);
+        }
+        .sub-tab.active {
+            color: var(--pixiv-blue);
+        }
+        .sub-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -9px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--pixiv-blue);
+        }
+        .page-count-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            z-index: 10;
+        }
     </style>
 </head>
 
@@ -338,7 +383,11 @@
 
         <!-- 1. ホーム（おすすめ） -->
         <div id="homeView">
-            <div class="section-title">あなたへのおすすめイラスト</div>
+            <div class="sub-tabs-container">
+                <span id="homeTab-illust" class="sub-tab active" onclick="switchHomeTab('illust')">イラスト</span>
+                <span id="homeTab-novel" class="sub-tab" onclick="switchHomeTab('novel')">小説</span>
+            </div>
+            <div class="section-title" id="homeSectionTitle">あなたへのおすすめイラスト</div>
             <div class="grid" id="recommendGrid"></div>
         </div>
 
@@ -359,6 +408,11 @@
 
         <!-- 3. 検索結果 -->
         <div id="searchView" style="display:none;">
+            <div class="sub-tabs-container">
+                <span id="searchTab-illust" class="sub-tab active" onclick="switchSearchType('illust')">イラスト</span>
+                <span id="searchTab-novel" class="sub-tab" onclick="switchSearchType('novel')">小説</span>
+                <span id="searchTab-user" class="sub-tab" onclick="switchSearchType('user')">ユーザー</span>
+            </div>
             <div class="grid" id="resultGrid"></div>
             <div id="searchPagination" class="pagination" style="display:none; text-align:center; margin:24px 0; align-items:center; justify-content:center; gap:16px;">
                 <button id="searchPrevBtn" class="btn" style="background:#555; padding:8px 16px;">前へ</button>
@@ -392,7 +446,11 @@
                     </div>
                 </div>
             </div>
-            <div class="section-title">作品一覧</div>
+            <div class="sub-tabs-container">
+                <span id="userTab-illust" class="sub-tab active" onclick="switchUserTab('illust')">イラスト</span>
+                <span id="userTab-novel" class="sub-tab" onclick="switchUserTab('novel')">小説</span>
+            </div>
+            <div class="section-title" id="userSectionTitle">イラスト作品一覧</div>
             <div class="grid" id="userGrid"></div>
             <div id="userPagination" class="pagination" style="text-align:center; margin:24px 0; display:flex; align-items:center; justify-content:center; gap:16px;">
                 <button id="userPrevBtn" class="btn" style="background:#555; padding:8px 16px;">前へ</button>
@@ -526,7 +584,7 @@
             const activeTab = document.getElementById(`tab-${viewName}`);
             if (activeTab) activeTab.classList.add('active');
 
-            if (viewName === 'home') loadRecommendations();
+            if (viewName === 'home') switchHomeTab(currentHomeTab);
             if (viewName === 'rank') loadRanking();
             if (viewName === 'fav') renderFavorites();
             if (viewName === 'history') renderHistory();
@@ -542,6 +600,41 @@
             } else {
                 searchMode.style.display = 'inline-block';
                 searchOrder.style.display = 'inline-block';
+            }
+        }
+
+        let currentHomeTab = 'illust';
+        async function switchHomeTab(type) {
+            currentHomeTab = type;
+            document.querySelectorAll('#homeView .sub-tab').forEach(el => el.classList.remove('active'));
+            const activeEl = document.getElementById(`homeTab-${type}`);
+            if (activeEl) activeEl.classList.add('active');
+            
+            const grid = document.getElementById('recommendGrid'), loading = document.getElementById('loading');
+            const titleEl = document.getElementById('homeSectionTitle');
+            grid.innerHTML = '';
+            
+            if (type === 'illust') {
+                titleEl.innerText = 'あなたへのおすすめイラスト';
+                loadRecommendations();
+            } else {
+                titleEl.innerText = 'あなたへのおすすめ小説';
+                loading.style.display = 'block';
+                try {
+                    let data;
+                    if (isGas) {
+                        const resText = await runGasServer('getRecommendedNovels');
+                        data = JSON.parse(resText);
+                    } else {
+                        const res = await fetch(getApiUrl({ action: 'recommended_novel' }));
+                        data = await res.json();
+                    }
+                    renderGridItems(data.novels, grid, 'novel');
+                } catch (e) {
+                    grid.innerHTML = '<p>読み込み失敗</p>';
+                } finally {
+                    loading.style.display = 'none';
+                }
             }
         }
 
@@ -608,6 +701,11 @@
             
             saveSearchHistory(word, type);
 
+            // サブタブのアクティブ状態更新
+            document.querySelectorAll('#searchView .sub-tab').forEach(el => el.classList.remove('active'));
+            const activeSubTab = document.getElementById(`searchTab-${type}`);
+            if (activeSubTab) activeSubTab.classList.add('active');
+
             const s_mode = document.getElementById('searchMode').value;
             const order = document.getElementById('searchOrder').value;
 
@@ -653,6 +751,12 @@
             }
         }
 
+        function switchSearchType(type) {
+            document.getElementById('searchType').value = type;
+            toggleSearchModeSelect();
+            startSearch(currentSearchQuery, 1);
+        }
+
         function setupSearchPagination(hasNext) {
             const pagination = document.getElementById('searchPagination');
             const prevBtn = document.getElementById('searchPrevBtn');
@@ -683,9 +787,18 @@
                 let badgeHtml = '';
                 if (item.x_restrict === 1) badgeHtml = '<div class="badge">R-18</div>';
                 if (type === 'novel' || item._type === 'novel') badgeHtml += '<div class="badge novel-tag" style="left:50px;">小説</div>';
+                
+                // 複数枚画像バッジ
+                const pageCount = item.page_count || item.pageCount || 1;
+                let pageBadge = '';
+                if ((type === 'illust' || item._type === 'illust') && pageCount > 1) {
+                    pageBadge = `<div class="page-count-badge">${pageCount}P</div>`;
+                }
+
                 const origThumb = (type === 'illust' || item._type === 'illust') ? item?.image_urls?.square_medium : item?.image_urls?.large;
                 card.innerHTML = `
                     ${badgeHtml}
+                    ${pageBadge}
                     <div class="thumb-box"><img id="img-${item.id}" loading="lazy"></div>
                     <div class="item-info">
                         <div class="item-title">${item.title}</div>
@@ -752,23 +865,75 @@
             }).join('');
 
             if (type === 'illust') {
-                const bigImgUrl = item?.meta_single_page?.original_image_url || item?.image_urls?.large;
-                content.innerHTML = `
-                    <div class="view-card big-img">
-                        <h1 style="font-size:22px; margin-bottom:8px;">${item.title}</h1>
-                        <p style="color:var(--text-sub); margin-bottom:16px;">
-                            ユーザー: <span class="author-link" onclick="openUserPage('${item.user.id}')">${item.user.name}</span>
-                        </p>
-                        <div style="margin-bottom:20px; display:flex; flex-wrap:wrap; justify-content:center; gap:4px;">${tagsHtml}</div>
-                        <img id="detailImg" referrerpolicy="no-referrer">
-                        <p style="text-align:left; white-space:pre-wrap; margin-top:20px; font-size:14px; color:var(--text-main); line-height:1.6;">${item.caption || ''}</p>
-                    </div>
-                `;
+                const pageCount = item.page_count || item.pageCount || 1;
                 
-                setTimeout(() => {
-                    const imgEl = content.querySelector('#detailImg');
-                    if (imgEl) loadImageToElement(imgEl, bigImgUrl);
-                }, 0);
+                if (pageCount > 1) {
+                    content.innerHTML = `
+                        <div class="view-card big-img">
+                            <h1 style="font-size:22px; margin-bottom:8px;">${item.title}</h1>
+                            <p style="color:var(--text-sub); margin-bottom:16px;">
+                                ユーザー: <span class="author-link" onclick="openUserPage('${item.user.id}')">${item.user.name}</span>
+                            </p>
+                            <div style="margin-bottom:20px; display:flex; flex-wrap:wrap; justify-content:center; gap:4px;">${tagsHtml}</div>
+                            <div id="pagesList" style="display:flex; flex-direction:column; gap:24px; align-items:center; width:100%;">
+                                <p style="color:var(--text-sub);">全 ${pageCount} ページの画像をロード中...</p>
+                            </div>
+                            <p style="text-align:left; white-space:pre-wrap; margin-top:30px; font-size:14px; color:var(--text-main); line-height:1.6;">${item.caption || ''}</p>
+                        </div>
+                    `;
+                    
+                    setTimeout(async () => {
+                        try {
+                            let pagesData;
+                            if (isGas) {
+                                const pagesText = await runGasServer('getIllustPages', item.id);
+                                pagesData = JSON.parse(pagesText);
+                            } else {
+                                const res = await fetch(getApiUrl({ action: 'illust_pages', id: item.id }));
+                                pagesData = await res.json();
+                            }
+                            
+                            const pagesList = content.querySelector('#pagesList');
+                            pagesList.innerHTML = '';
+                            
+                            (pagesData.pages || []).forEach((pageObj, index) => {
+                                const pageWrapper = document.createElement('div');
+                                pageWrapper.style.width = '100%';
+                                pageWrapper.style.textAlign = 'center';
+                                pageWrapper.style.position = 'relative';
+                                pageWrapper.innerHTML = `
+                                    <img id="detailImg-${item.id}-${index}" style="max-width:100%; border-radius:8px; display:block; margin:0 auto;" referrerpolicy="no-referrer">
+                                    <div style="margin-top:8px; font-size:12px; color:var(--text-sub); font-weight:bold;">${index + 1} / ${pageCount} ページ</div>
+                                `;
+                                pagesList.appendChild(pageWrapper);
+                                
+                                const imgEl = pageWrapper.querySelector(`#detailImg-${item.id}-${index}`);
+                                if (imgEl) loadImageToElement(imgEl, pageObj.urls.large);
+                            });
+                        } catch (e) {
+                            console.error('Failed to load multi pages:', e);
+                            content.querySelector('#pagesList').innerHTML = '<p style="color:red;">画像の読み込みに失敗しました。</p>';
+                        }
+                    }, 0);
+                } else {
+                    const bigImgUrl = item?.meta_single_page?.original_image_url || item?.image_urls?.large;
+                    content.innerHTML = `
+                        <div class="view-card big-img">
+                            <h1 style="font-size:22px; margin-bottom:8px;">${item.title}</h1>
+                            <p style="color:var(--text-sub); margin-bottom:16px;">
+                                ユーザー: <span class="author-link" onclick="openUserPage('${item.user.id}')">${item.user.name}</span>
+                            </p>
+                            <div style="margin-bottom:20px; display:flex; flex-wrap:wrap; justify-content:center; gap:4px;">${tagsHtml}</div>
+                            <img id="detailImg" referrerpolicy="no-referrer">
+                            <p style="text-align:left; white-space:pre-wrap; margin-top:20px; font-size:14px; color:var(--text-main); line-height:1.6;">${item.caption || ''}</p>
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        const imgEl = content.querySelector('#detailImg');
+                        if (imgEl) loadImageToElement(imgEl, bigImgUrl);
+                    }, 0);
+                }
             } else {
                 loading.style.display = 'block';
                 try {
@@ -804,6 +969,19 @@
             startSearch(tagName, 1);
         }
 
+        let currentUserTab = 'illust';
+        function switchUserTab(type) {
+            currentUserTab = type;
+            document.querySelectorAll('#userView .sub-tab').forEach(el => el.classList.remove('active'));
+            const activeEl = document.getElementById(`userTab-${type}`);
+            if (activeEl) activeEl.classList.add('active');
+            
+            const titleEl = document.getElementById('userSectionTitle');
+            titleEl.innerText = type === 'illust' ? 'イラスト作品一覧' : '小説作品一覧';
+            
+            openUserPage(currentUserId, 1);
+        }
+
         async function openUserPage(userId, page = 1) {
             const activeView = ['home', 'rank', 'search', 'fav', 'history', 'detail', 'user'].find(v => {
                 const el = document.getElementById(`${v}View`);
@@ -826,6 +1004,13 @@
             pagination.style.display = 'none';
             
             if (page === 1) {
+                // サブタブを「イラスト」に初期化
+                currentUserTab = 'illust';
+                document.querySelectorAll('#userView .sub-tab').forEach(el => el.classList.remove('active'));
+                const activeEl = document.getElementById('userTab-illust');
+                if (activeEl) activeEl.classList.add('active');
+                document.getElementById('userSectionTitle').innerText = 'イラスト作品一覧';
+
                 avatar.src = '';
                 nameEl.innerText = '読み込み中...';
                 commentEl.innerHTML = '';
@@ -854,22 +1039,33 @@
             loading.style.display = 'block';
             try {
                 let data;
-                if (isGas) {
-                    const resText = await runGasServer('getUserIllusts', userId, page);
-                    data = JSON.parse(resText);
+                if (currentUserTab === 'illust') {
+                    if (isGas) {
+                        const resText = await runGasServer('getUserIllusts', userId, page);
+                        data = JSON.parse(resText);
+                    } else {
+                        const res = await fetch(getApiUrl({ action: 'user_illusts', id: userId, page }));
+                        data = await res.json();
+                    }
+                    renderGridItems(data.illusts, grid, 'illust');
                 } else {
-                    const res = await fetch(getApiUrl({ action: 'user_illusts', id: userId, page }));
-                    data = await res.json();
+                    if (isGas) {
+                        const resText = await runGasServer('getUserNovels', userId, page);
+                        data = JSON.parse(resText);
+                    } else {
+                        const res = await fetch(getApiUrl({ action: 'user_novels', id: userId, page }));
+                        data = await res.json();
+                    }
+                    renderGridItems(data.novels, grid, 'novel');
                 }
-                const items = data.illusts || [];
+                
                 const total = data.total || 0;
                 
-                if (items.length === 0) {
+                if ((currentUserTab === 'illust' && (!data.illusts || data.illusts.length === 0)) ||
+                    (currentUserTab === 'novel' && (!data.novels || data.novels.length === 0))) {
                     grid.innerHTML = '<p>公開されている作品がありません。</p>';
                     return;
                 }
-                
-                renderGridItems(items, grid, 'illust');
                 
                 const hasNext = (page * 24) < total;
                 setupUserPagination(hasNext);

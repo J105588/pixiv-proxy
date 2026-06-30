@@ -58,7 +58,8 @@ export default async function handler(req, res) {
                     square_medium: item.url,
                     large: getLargeImageUrl(item.url)
                 },
-                tags: item.tags || []
+                tags: item.tags || [],
+                page_count: item.pageCount || 1
             }));
             return res.status(200).json({ illusts });
         }
@@ -111,7 +112,8 @@ export default async function handler(req, res) {
                     square_medium: item.url,
                     large: getLargeImageUrl(item.url)
                 },
-                tags: item.tags || []
+                tags: item.tags || [],
+                page_count: item.page_count || 1
             }));
             return res.status(200).json({ illusts });
         }
@@ -132,7 +134,8 @@ export default async function handler(req, res) {
                     large: getLargeImageUrl(item.url)
                 },
                 caption: item.description || '',
-                tags: item.tags || []
+                tags: item.tags || [],
+                page_count: item.pageCount || 1
             }));
             return res.status(200).json({ illusts });
         }
@@ -222,14 +225,99 @@ export default async function handler(req, res) {
                         square_medium: w.url,
                         large: getLargeImageUrl(w.url)
                     },
-                    tags: w.tags || []
+                    tags: w.tags || [],
+                    page_count: w.pageCount || 1
                 };
             }).filter(Boolean);
             
             return res.status(200).json({ illusts, total });
         }
 
-        // 9. 画像バイナリ中継
+        // 9. イラスト複数枚画像 (全ページ)
+        if (type === 'illust_pages') {
+            const response = await axios.get(`https://www.pixiv.net/ajax/illust/${id}/pages`, {
+                headers: webApiHeaders
+            });
+            const rawPages = response.data.body || [];
+            const pages = rawPages.map(page => ({
+                urls: {
+                    medium: page.urls.medium,
+                    large: getLargeImageUrl(page.urls.medium) || page.urls.regular
+                }
+            }));
+            return res.status(200).json({ pages });
+        }
+
+        // 10. おすすめ小説
+        if (type === 'recommended_novel') {
+            const response = await axios.get(`https://www.pixiv.net/ajax/top/novel?mode=all`, {
+                headers: webApiHeaders
+            });
+            const rawData = response.data.body?.thumbnails?.novel || [];
+            const novels = rawData.map(item => ({
+                id: item.id,
+                title: item.title,
+                x_restrict: item.xRestrict,
+                user: { id: item.userId, name: item.userName },
+                image_urls: {
+                    large: item.url
+                },
+                tags: item.tags || [],
+                text_length: item.textCount
+            }));
+            return res.status(200).json({ novels });
+        }
+
+        // 11. 作者小説一覧 (ページネーション対応)
+        if (type === 'user_novels') {
+            const page = p || 1;
+            const allRes = await axios.get(`https://www.pixiv.net/ajax/user/${id}/profile/all`, {
+                headers: webApiHeaders
+            });
+            const novelsObj = allRes.data.body?.novels || {};
+            const allIds = Object.keys(novelsObj).map(Number).sort((a, b) => b - a);
+            const total = allIds.length;
+            
+            if (total === 0) {
+                return res.status(200).json({ novels: [], total: 0 });
+            }
+            
+            const pageSize = 24;
+            const pageIds = allIds.slice((page - 1) * pageSize, page * pageSize);
+            if (pageIds.length === 0) {
+                return res.status(200).json({ novels: [], total });
+            }
+            
+            const idsQuery = pageIds.map(pid => `ids[]=${pid}`).join('&');
+            const worksUrl = `https://www.pixiv.net/ajax/user/${id}/profile/novels?${idsQuery}&work_category=novel&is_first_page=0`;
+            const worksRes = await axios.get(worksUrl, {
+                headers: {
+                    ...webApiHeaders,
+                    'Referer': `https://www.pixiv.net/users/${id}/novels`
+                }
+            });
+            
+            const works = worksRes.data.body?.works || {};
+            const novels = pageIds.map(pid => {
+                const w = works[pid];
+                if (!w) return null;
+                return {
+                    id: w.id.toString(),
+                    title: w.title,
+                    x_restrict: w.xRestrict,
+                    user: { id: w.userId, name: w.userName },
+                    image_urls: {
+                        large: w.url
+                    },
+                    tags: w.tags || [],
+                    text_length: w.textCount
+                };
+            }).filter(Boolean);
+            
+            return res.status(200).json({ novels, total });
+        }
+
+        // 12. 画像バイナリ中継
         if (type === 'image') {
             if (!url || url === 'undefined' || url === '') return res.status(400).json({ error: 'url パラメータが必要です。' });
             const response = await axios.get(url, {
