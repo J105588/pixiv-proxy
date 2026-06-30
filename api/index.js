@@ -10,20 +10,19 @@ export default async function handler(req, res) {
 
     const { type, id, url, word, mode } = req.query;
 
-    // Vercelの環境変数から2つのトークンを読み込む
+    // Vercelの環境変数から PHPSESSID を読み込む
     const phpSessId = process.env.PIXIV_PHPSESSID;
-    const deviceToken = process.env.PIXIV_DEVICE_TOKEN;
 
-    if (!phpSessId || !deviceToken) {
+    if (!phpSessId) {
         return res.status(500).json({
-            error: 'Vercelの環境変数 PIXIV_PHPSESSID または PIXIV_DEVICE_TOKEN が設定されていません。'
+            error: 'Vercelの環境変数 PIXIV_PHPSESSID が設定されていません。'
         });
     }
 
-    // PHPSESSID と device_token をセットで送り、ログイン維持能力を最大化
-    const appApiHeaders = {
-        'User-Agent': 'PixivAndroidApp/5.0.234',
-        'Cookie': `PHPSESSID=${phpSessId}; device_token=${deviceToken}`,
+    // Web API用の共通ヘッダー
+    const webApiHeaders = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Cookie': `PHPSESSID=${phpSessId}`,
         'Accept-Language': 'ja-jp',
         'Referer': 'https://www.pixiv.net/'
     };
@@ -31,50 +30,113 @@ export default async function handler(req, res) {
     try {
         // 1. 插画・漫画検索
         if (type === 'search_illust') {
-            const response = await axios.get(`https://app-api.pixiv.net/v1/search/illust?word=${encodeURIComponent(word)}&search_target=partial_match_for_tags&sort=date_desc`, {
-                headers: appApiHeaders
+            const response = await axios.get(`https://www.pixiv.net/ajax/search/artworks/${encodeURIComponent(word)}?word=${encodeURIComponent(word)}&order=date_d&mode=all&p=1&s_mode=s_tag_full&type=all`, {
+                headers: webApiHeaders
             });
-            return res.status(200).json(response.data);
+            const rawData = response.data.body?.illustManga?.data || [];
+            const illusts = rawData.map(item => ({
+                id: item.id,
+                title: item.title,
+                x_restrict: item.xRestrict,
+                user: { id: item.userId, name: item.userName },
+                image_urls: {
+                    square_medium: item.url,
+                    large: item.url
+                }
+            }));
+            return res.status(200).json({ illusts });
         }
 
         // 2. 小説検索
         if (type === 'search_novel') {
-            const response = await axios.get(`https://app-api.pixiv.net/v1/search/novel?word=${encodeURIComponent(word)}&search_target=partial_match_for_tags&sort=date_desc`, {
-                headers: appApiHeaders
+            const response = await axios.get(`https://www.pixiv.net/ajax/search/novels/${encodeURIComponent(word)}?word=${encodeURIComponent(word)}&order=date_d&p=1&s_mode=s_tag`, {
+                headers: webApiHeaders
             });
-            return res.status(200).json(response.data);
+            const rawData = response.data.body?.novel?.data || [];
+            const novels = rawData.map(item => ({
+                id: item.id,
+                title: item.title,
+                x_restrict: item.xRestrict,
+                user: { id: item.userId, name: item.userName },
+                image_urls: {
+                    large: item.url
+                },
+                text_length: item.textCount
+            }));
+            return res.status(200).json({ novels });
         }
 
         // 3. ランキング
         if (type === 'ranking') {
-            const targetMode = mode || 'day';
-            const response = await axios.get(`https://app-api.pixiv.net/v1/illust/ranking?mode=${targetMode}`, {
-                headers: appApiHeaders
+            const modeMap = {
+                'day': 'daily',
+                'day_male': 'male',
+                'day_female': 'female',
+                'day_r18': 'daily_r18',
+                'day_male_r18': 'male_r18'
+            };
+            const targetMode = modeMap[mode] || modeMap['day'];
+            const response = await axios.get(`https://www.pixiv.net/ranking.php?mode=${targetMode}&format=json`, {
+                headers: webApiHeaders
             });
-            return res.status(200).json(response.data);
+            const rawData = response.data.contents || [];
+            const illusts = rawData.map(item => ({
+                id: item.illust_id.toString(),
+                title: item.title,
+                x_restrict: item.tags?.includes('R-18') ? 1 : 0,
+                user: { id: item.user_id.toString(), name: item.user_name },
+                image_urls: {
+                    square_medium: item.url,
+                    large: item.url
+                }
+            }));
+            return res.status(200).json({ illusts });
         }
 
         // 4. おすすめ
         if (type === 'recommended') {
-            const response = await axios.get(`https://app-api.pixiv.net/v1/illust/recommended?content_type=illust`, {
-                headers: appApiHeaders
+            const response = await axios.get(`https://www.pixiv.net/ajax/top/illust?mode=all`, {
+                headers: webApiHeaders
             });
-            return res.status(200).json(response.data);
+            const ids = response.data.body?.page?.recommend?.ids || [];
+            const details = response.data.body?.page?.recommend?.details || {};
+            const illusts = ids.map(id => {
+                const item = details[id];
+                if (!item) return null;
+                return {
+                    id: item.id,
+                    title: item.title,
+                    x_restrict: item.xRestrict,
+                    user: { id: item.userId, name: item.userName },
+                    image_urls: {
+                        square_medium: item.url,
+                        large: item.url
+                    },
+                    caption: item.description || ''
+                };
+            }).filter(item => item !== null);
+            return res.status(200).json({ illusts });
         }
 
         // 5. 小説本文
         if (type === 'novel_text') {
-            const response = await axios.get(`https://app-api.pixiv.net/v1/novel/text?novel_id=${id}`, {
-                headers: appApiHeaders
+            const response = await axios.get(`https://www.pixiv.net/ajax/novel/${id}`, {
+                headers: webApiHeaders
             });
-            return res.status(200).json(response.data);
+            return res.status(200).json({
+                novel_text: response.data.body?.content || ''
+            });
         }
 
         // 6. 画像バイナリ中継
         if (type === 'image') {
             if (!url) return res.status(400).json({ error: 'url パラメータが必要です。' });
             const response = await axios.get(url, {
-                headers: appApiHeaders,
+                headers: {
+                    'User-Agent': webApiHeaders['User-Agent'],
+                    'Referer': 'https://www.pixiv.net/',
+                    'Cookie': webApiHeaders['Cookie']
+                },
                 responseType: 'arraybuffer'
             });
             res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg');

@@ -1,3 +1,4 @@
-/GAS
+node_modules/
 .env
-.vercel
+.vercel/
+/scratch/
