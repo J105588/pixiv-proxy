@@ -570,6 +570,35 @@
             });
         }
 
+        // 画像並行ロード数管理キュー
+        const imageLoadQueue = [];
+        let activeImageLoads = 0;
+        const MAX_CONCURRENT_IMAGE_LOADS = 4;
+
+        function queueImageLoad(imgElement, origUrl) {
+            if (!origUrl) return;
+            imageLoadQueue.push({ imgElement, origUrl });
+            processImageLoadQueue();
+        }
+
+        async function processImageLoadQueue() {
+            if (activeImageLoads >= MAX_CONCURRENT_IMAGE_LOADS || imageLoadQueue.length === 0) {
+                return;
+            }
+            
+            const { imgElement, origUrl } = imageLoadQueue.shift();
+            activeImageLoads++;
+            
+            try {
+                await loadImageToElement(imgElement, origUrl);
+            } catch (e) {
+                console.error('Queue image load error:', e);
+            } finally {
+                activeImageLoads--;
+                processImageLoadQueue();
+            }
+        }
+
         async function loadImageToElement(imgElement, origUrl) {
             if (!origUrl) return;
             if (!isGas) {
@@ -835,7 +864,7 @@
 
                 setTimeout(() => {
                     const imgEl = card.querySelector(`#img-${item.id}`);
-                    if (imgEl) loadImageToElement(imgEl, origThumb);
+                    if (imgEl) queueImageLoad(imgEl, origThumb);
                 }, 0);
             });
         }
@@ -863,7 +892,7 @@
 
                 setTimeout(() => {
                     const imgEl = card.querySelector(`#${avatarId}`);
-                    if (imgEl) loadImageToElement(imgEl, user.avatar);
+                    if (imgEl) queueImageLoad(imgEl, user.avatar);
                 }, 0);
             });
         }
@@ -931,7 +960,7 @@
                                 pagesList.appendChild(pageWrapper);
 
                                 const imgEl = pageWrapper.querySelector(`#detailImg-${item.id}-${index}`);
-                                if (imgEl) loadImageToElement(imgEl, pageObj.urls.large);
+                                if (imgEl) queueImageLoad(imgEl, pageObj.urls.large);
                             });
                         } catch (e) {
                             console.error('Failed to load multi pages:', e);
@@ -954,7 +983,7 @@
 
                     setTimeout(() => {
                         const imgEl = content.querySelector('#detailImg');
-                        if (imgEl) loadImageToElement(imgEl, bigImgUrl);
+                        if (imgEl) queueImageLoad(imgEl, bigImgUrl);
                     }, 0);
                 }
             } else {
@@ -1095,7 +1124,7 @@
                     commentEl.innerHTML = userDetail.comment || '紹介文はありません。';
 
                     if (userDetail.avatar) {
-                        loadImageToElement(avatar, userDetail.avatar);
+                        queueImageLoad(avatar, userDetail.avatar);
                     }
                 } catch (e) {
                     nameEl.innerText = '情報取得失敗';
