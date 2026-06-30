@@ -125,9 +125,29 @@ function getRanking(mode) {
     return response.getContentText();
 }
 
-function searchIllustOrNovel(apiType, word) {
+function searchIllustOrNovel(apiType, word, page, s_mode, order) {
     const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
-    const response = UrlFetchApp.fetch(`${baseUrl}/api?type=${apiType}&word=${encodeURIComponent(word)}`, { muteHttpExceptions: true });
+    const url = `${baseUrl}/api?type=${apiType}&word=${encodeURIComponent(word)}&p=${page || 1}&s_mode=${s_mode || ''}&order=${order || ''}`;
+    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    return response.getContentText();
+}
+
+function searchUsers(word, page) {
+    const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
+    const url = `${baseUrl}/api?type=search_user&word=${encodeURIComponent(word)}&p=${page || 1}`;
+    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    return response.getContentText();
+}
+
+function getUserDetail(userId) {
+    const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
+    const response = UrlFetchApp.fetch(`${baseUrl}/api?type=user_detail&id=${userId}`, { muteHttpExceptions: true });
+    return response.getContentText();
+}
+
+function getUserIllusts(userId, page) {
+    const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
+    const response = UrlFetchApp.fetch(`${baseUrl}/api?type=user_illusts&id=${userId}&p=${page || 1}`, { muteHttpExceptions: true });
     return response.getContentText();
 }
 
