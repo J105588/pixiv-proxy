@@ -1,5 +1,15 @@
 import axios from 'axios';
 
+function getLargeImageUrl(thumbUrl) {
+    if (!thumbUrl) return '';
+    let large = thumbUrl;
+    large = large.replace(/\/c\/[^\/]+/, '');
+    large = large.replace('/custom-thumb/', '/img-master/');
+    large = large.replace('_custom1200', '_master1200');
+    large = large.replace('_square1200', '_master1200');
+    return large;
+}
+
 export default async function handler(req, res) {
     // CORS解放
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -41,7 +51,7 @@ export default async function handler(req, res) {
                 user: { id: item.userId, name: item.userName },
                 image_urls: {
                     square_medium: item.url,
-                    large: item.url
+                    large: getLargeImageUrl(item.url)
                 }
             }));
             return res.status(200).json({ illusts });
@@ -87,7 +97,7 @@ export default async function handler(req, res) {
                 user: { id: item.user_id.toString(), name: item.user_name },
                 image_urls: {
                     square_medium: item.url,
-                    large: item.url
+                    large: getLargeImageUrl(item.url)
                 }
             }));
             return res.status(200).json({ illusts });
@@ -106,7 +116,7 @@ export default async function handler(req, res) {
                 user: { id: item.userId, name: item.userName },
                 image_urls: {
                     square_medium: item.url,
-                    large: item.url
+                    large: getLargeImageUrl(item.url)
                 },
                 caption: item.description || ''
             }));
