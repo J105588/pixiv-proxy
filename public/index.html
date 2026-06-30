@@ -275,7 +275,7 @@
             padding: 4px 8px;
             border-radius: 4px;
         }
-        
+
         .tag-badge {
             background: #e6f7ff;
             color: var(--pixiv-blue);
@@ -288,19 +288,22 @@
             display: inline-block;
             margin: 4px;
         }
+
         .tag-badge:hover {
             background: #bae7ff;
         }
+
         .author-link {
             color: var(--pixiv-blue);
             cursor: pointer;
             text-decoration: none;
             font-weight: 500;
         }
+
         .author-link:hover {
             text-decoration: underline;
         }
-        
+
         /* サブタブ (即時切り替えタブ) のスタイル */
         .sub-tabs-container {
             display: flex;
@@ -309,6 +312,7 @@
             border-bottom: 1px solid var(--border);
             padding-bottom: 8px;
         }
+
         .sub-tab {
             cursor: pointer;
             padding: 8px 16px;
@@ -318,12 +322,15 @@
             font-size: 14px;
             transition: color 0.2s;
         }
+
         .sub-tab:hover {
             color: var(--text-main);
         }
+
         .sub-tab.active {
             color: var(--pixiv-blue);
         }
+
         .sub-tab.active::after {
             content: '';
             position: absolute;
@@ -333,6 +340,7 @@
             height: 2px;
             background: var(--pixiv-blue);
         }
+
         .page-count-badge {
             position: absolute;
             top: 8px;
@@ -379,7 +387,7 @@
     </header>
 
     <div class="main-container">
-        <div id="loading" class="loading">制限コンテンツをデコード中...</div>
+        <div id="loading" class="loading">コンテンツをデコード中...</div>
 
         <!-- 1. ホーム（おすすめ） -->
         <div id="homeView">
@@ -414,7 +422,8 @@
                 <span id="searchTab-user" class="sub-tab" onclick="switchSearchType('user')">ユーザー</span>
             </div>
             <div class="grid" id="resultGrid"></div>
-            <div id="searchPagination" class="pagination" style="display:none; text-align:center; margin:24px 0; align-items:center; justify-content:center; gap:16px;">
+            <div id="searchPagination" class="pagination"
+                style="display:none; text-align:center; margin:24px 0; align-items:center; justify-content:center; gap:16px;">
                 <button id="searchPrevBtn" class="btn" style="background:#555; padding:8px 16px;">前へ</button>
                 <span id="searchPageNum" style="color:var(--text-main); font-weight:bold; font-size:16px;">Page 1</span>
                 <button id="searchNextBtn" class="btn" style="background:#555; padding:8px 16px;">次へ</button>
@@ -439,10 +448,13 @@
         <div id="userView" style="display:none;">
             <div class="view-card" style="margin-bottom:24px; padding:24px;">
                 <div style="display:flex; align-items:center; gap:20px;">
-                    <img id="userAvatar" src="" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--border); background:#eee;">
+                    <img id="userAvatar" src=""
+                        style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--border); background:#eee;">
                     <div style="flex:1;">
                         <h1 id="userProfileName" style="margin:0; font-size:22px; color:var(--text-main);"></h1>
-                        <div id="userProfileComment" style="margin-top:10px; font-size:14px; color:var(--text-sub); white-space:pre-wrap; max-height:150px; overflow-y:auto; line-height:1.6;"></div>
+                        <div id="userProfileComment"
+                            style="margin-top:10px; font-size:14px; color:var(--text-sub); white-space:pre-wrap; max-height:150px; overflow-y:auto; line-height:1.6;">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -452,7 +464,8 @@
             </div>
             <div class="section-title" id="userSectionTitle">イラスト作品一覧</div>
             <div class="grid" id="userGrid"></div>
-            <div id="userPagination" class="pagination" style="text-align:center; margin:24px 0; display:flex; align-items:center; justify-content:center; gap:16px;">
+            <div id="userPagination" class="pagination"
+                style="text-align:center; margin:24px 0; display:flex; align-items:center; justify-content:center; gap:16px;">
                 <button id="userPrevBtn" class="btn" style="background:#555; padding:8px 16px;">前へ</button>
                 <span id="userPageNum" style="color:var(--text-main); font-weight:bold; font-size:16px;">Page 1</span>
                 <button id="userNextBtn" class="btn" style="background:#555; padding:8px 16px;">次へ</button>
@@ -609,11 +622,11 @@
             document.querySelectorAll('#homeView .sub-tab').forEach(el => el.classList.remove('active'));
             const activeEl = document.getElementById(`homeTab-${type}`);
             if (activeEl) activeEl.classList.add('active');
-            
+
             const grid = document.getElementById('recommendGrid'), loading = document.getElementById('loading');
             const titleEl = document.getElementById('homeSectionTitle');
             grid.innerHTML = '';
-            
+
             if (type === 'illust') {
                 titleEl.innerText = 'あなたへのおすすめイラスト';
                 loadRecommendations();
@@ -685,20 +698,20 @@
             const type = document.getElementById('searchType').value;
             const word = forcedWord || document.getElementById('queryInput').value.trim();
             if (forcedWord) document.getElementById('queryInput').value = word;
-            
+
             const grid = document.getElementById('resultGrid'), loading = document.getElementById('loading');
             const pagination = document.getElementById('searchPagination');
 
             if (!word) return alert('キーワードを入力してください');
-            
+
             currentSearchQuery = word;
             currentSearchType = type;
             currentSearchPage = page;
-            
+
             grid.innerHTML = '';
             loading.style.display = 'block';
             pagination.style.display = 'none';
-            
+
             saveSearchHistory(word, type);
 
             // サブタブのアクティブ状態更新
@@ -737,17 +750,17 @@
                         data = await res.json();
                     }
                     const items = type === 'illust' ? data.illusts : data.novels;
-                    if (!items || items.length === 0) { 
-                        grid.innerHTML = '<p>作品が見つかりませんでした。</p>'; 
-                        return; 
+                    if (!items || items.length === 0) {
+                        grid.innerHTML = '<p>作品が見つかりませんでした。</p>';
+                        return;
                     }
                     renderGridItems(items, grid, type);
                     setupSearchPagination(items.length >= 15);
                 }
-            } catch (err) { 
-                grid.innerHTML = `<p style="color:red;">エラー: ${err.message}</p>`; 
-            } finally { 
-                loading.style.display = 'none'; 
+            } catch (err) {
+                grid.innerHTML = `<p style="color:red;">エラー: ${err.message}</p>`;
+            } finally {
+                loading.style.display = 'none';
             }
         }
 
@@ -762,17 +775,17 @@
             const prevBtn = document.getElementById('searchPrevBtn');
             const nextBtn = document.getElementById('searchNextBtn');
             const pageNum = document.getElementById('searchPageNum');
-            
+
             pagination.style.display = 'flex';
             pageNum.innerText = `Page ${currentSearchPage}`;
-            
+
             prevBtn.disabled = currentSearchPage <= 1;
             prevBtn.onclick = () => {
                 if (currentSearchPage > 1) {
                     startSearch(currentSearchQuery, currentSearchPage - 1);
                 }
             };
-            
+
             nextBtn.disabled = !hasNext;
             nextBtn.onclick = () => {
                 startSearch(currentSearchQuery, currentSearchPage + 1);
@@ -786,8 +799,15 @@
                 const card = document.createElement('div'); card.className = 'item-card';
                 let badgeHtml = '';
                 if (item.x_restrict === 1) badgeHtml = '<div class="badge">R-18</div>';
-                if (type === 'novel' || item._type === 'novel') badgeHtml += '<div class="badge novel-tag" style="left:50px;">小説</div>';
-                
+                let badgeLeft = 50;
+                if (type === 'novel' || item._type === 'novel') {
+                    badgeHtml += `<div class="badge novel-tag" style="left:${badgeLeft}px;">小説</div>`;
+                    badgeLeft += 50;
+                }
+                if (item.is_popular) {
+                    badgeHtml += `<div class="badge popular-tag" style="left:${badgeLeft}px; background:#ff9900;">人気</div>`;
+                }
+
                 // 複数枚画像バッジ
                 const pageCount = item.page_count || item.pageCount || 1;
                 let pageBadge = '';
@@ -809,7 +829,7 @@
                 `;
                 card.onclick = () => openDetail(item, item._type || type);
                 targetGrid.appendChild(card);
-                
+
                 setTimeout(() => {
                     const imgEl = card.querySelector(`#img-${item.id}`);
                     if (imgEl) loadImageToElement(imgEl, origThumb);
@@ -826,7 +846,7 @@
                 card.style.flexDirection = 'column';
                 card.style.alignItems = 'center';
                 card.style.padding = '16px 8px';
-                
+
                 const avatarId = `avatar-${user.id}`;
                 card.innerHTML = `
                     <div style="width:90px; height:90px; border-radius:50%; overflow:hidden; background:#eee; margin-bottom:12px;">
@@ -837,7 +857,7 @@
                 `;
                 card.onclick = () => openUserPage(user.id);
                 targetGrid.appendChild(card);
-                
+
                 setTimeout(() => {
                     const imgEl = card.querySelector(`#${avatarId}`);
                     if (imgEl) loadImageToElement(imgEl, user.avatar);
@@ -866,7 +886,7 @@
 
             if (type === 'illust') {
                 const pageCount = item.page_count || item.pageCount || 1;
-                
+
                 if (pageCount > 1) {
                     content.innerHTML = `
                         <div class="view-card big-img">
@@ -881,7 +901,7 @@
                             <p style="text-align:left; white-space:pre-wrap; margin-top:30px; font-size:14px; color:var(--text-main); line-height:1.6;">${item.caption || ''}</p>
                         </div>
                     `;
-                    
+
                     setTimeout(async () => {
                         try {
                             let pagesData;
@@ -892,10 +912,10 @@
                                 const res = await fetch(getApiUrl({ action: 'illust_pages', id: item.id }));
                                 pagesData = await res.json();
                             }
-                            
+
                             const pagesList = content.querySelector('#pagesList');
                             pagesList.innerHTML = '';
-                            
+
                             (pagesData.pages || []).forEach((pageObj, index) => {
                                 const pageWrapper = document.createElement('div');
                                 pageWrapper.style.width = '100%';
@@ -906,7 +926,7 @@
                                     <div style="margin-top:8px; font-size:12px; color:var(--text-sub); font-weight:bold;">${index + 1} / ${pageCount} ページ</div>
                                 `;
                                 pagesList.appendChild(pageWrapper);
-                                
+
                                 const imgEl = pageWrapper.querySelector(`#detailImg-${item.id}-${index}`);
                                 if (imgEl) loadImageToElement(imgEl, pageObj.urls.large);
                             });
@@ -928,7 +948,7 @@
                             <p style="text-align:left; white-space:pre-wrap; margin-top:20px; font-size:14px; color:var(--text-main); line-height:1.6;">${item.caption || ''}</p>
                         </div>
                     `;
-                    
+
                     setTimeout(() => {
                         const imgEl = content.querySelector('#detailImg');
                         if (imgEl) loadImageToElement(imgEl, bigImgUrl);
@@ -975,10 +995,10 @@
             document.querySelectorAll('#userView .sub-tab').forEach(el => el.classList.remove('active'));
             const activeEl = document.getElementById(`userTab-${type}`);
             if (activeEl) activeEl.classList.add('active');
-            
+
             const titleEl = document.getElementById('userSectionTitle');
             titleEl.innerText = type === 'illust' ? 'イラスト作品一覧' : '小説作品一覧';
-            
+
             openUserPage(currentUserId, 1);
         }
 
@@ -990,10 +1010,10 @@
             if (activeView && activeView !== 'user') previousView = activeView;
 
             switchTab('user');
-            
+
             currentUserId = userId;
             currentUserPage = page;
-            
+
             const grid = document.getElementById('userGrid'), loading = document.getElementById('loading');
             const avatar = document.getElementById('userAvatar');
             const nameEl = document.getElementById('userProfileName');
@@ -1002,7 +1022,7 @@
 
             grid.innerHTML = '';
             pagination.style.display = 'none';
-            
+
             if (page === 1) {
                 // サブタブを「イラスト」に初期化
                 currentUserTab = 'illust';
@@ -1014,7 +1034,7 @@
                 avatar.src = '';
                 nameEl.innerText = '読み込み中...';
                 commentEl.innerHTML = '';
-                
+
                 try {
                     let userDetail;
                     if (isGas) {
@@ -1026,7 +1046,7 @@
                     }
                     nameEl.innerText = userDetail.name;
                     commentEl.innerHTML = userDetail.comment || '紹介文はありません。';
-                    
+
                     if (userDetail.avatar) {
                         loadImageToElement(avatar, userDetail.avatar);
                     }
@@ -1058,15 +1078,15 @@
                     }
                     renderGridItems(data.novels, grid, 'novel');
                 }
-                
+
                 const total = data.total || 0;
-                
+
                 if ((currentUserTab === 'illust' && (!data.illusts || data.illusts.length === 0)) ||
                     (currentUserTab === 'novel' && (!data.novels || data.novels.length === 0))) {
                     grid.innerHTML = '<p>公開されている作品がありません。</p>';
                     return;
                 }
-                
+
                 const hasNext = (page * 24) < total;
                 setupUserPagination(hasNext);
             } catch (err) {
@@ -1081,17 +1101,17 @@
             const prevBtn = document.getElementById('userPrevBtn');
             const nextBtn = document.getElementById('userNextBtn');
             const pageNum = document.getElementById('userPageNum');
-            
+
             pagination.style.display = 'flex';
             pageNum.innerText = `Page ${currentUserPage}`;
-            
+
             prevBtn.disabled = currentUserPage <= 1;
             prevBtn.onclick = () => {
                 if (currentUserPage > 1) {
                     openUserPage(currentUserId, currentUserPage - 1);
                 }
             };
-            
+
             nextBtn.disabled = !hasNext;
             nextBtn.onclick = () => {
                 openUserPage(currentUserId, currentUserPage + 1);

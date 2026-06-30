@@ -49,7 +49,7 @@ export default async function handler(req, res) {
                 headers: webApiHeaders
             });
             const rawData = response.data.body?.illustManga?.data || [];
-            const illusts = rawData.map(item => ({
+            let mappedIllusts = rawData.map(item => ({
                 id: item.id,
                 title: item.title,
                 x_restrict: item.xRestrict,
@@ -61,7 +61,34 @@ export default async function handler(req, res) {
                 tags: item.tags || [],
                 page_count: item.pageCount || 1
             }));
-            return res.status(200).json({ illusts });
+
+            // 1ページ目の人気順指定の場合、人気のイラスト (recent + permanent) をマージ
+            if (orderStr === 'popular_d' && page == 1) {
+                const popularObj = response.data.body?.popular || {};
+                const popularRecent = popularObj.recent || [];
+                const popularPermanent = popularObj.permanent || [];
+                const popularItems = [...popularRecent, ...popularPermanent];
+                
+                const mappedPopular = popularItems.map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    x_restrict: item.xRestrict,
+                    user: { id: item.userId, name: item.userName },
+                    image_urls: {
+                        square_medium: item.url,
+                        large: getLargeImageUrl(item.url)
+                    },
+                    tags: item.tags || [],
+                    page_count: item.pageCount || 1,
+                    is_popular: true
+                }));
+
+                const seenIds = new Set(mappedPopular.map(x => x.id));
+                const filteredNormal = mappedIllusts.filter(x => !seenIds.has(x.id));
+                mappedIllusts = [...mappedPopular, ...filteredNormal];
+            }
+
+            return res.status(200).json({ illusts: mappedIllusts });
         }
 
         // 2. 小説検索
@@ -75,7 +102,7 @@ export default async function handler(req, res) {
                 headers: webApiHeaders
             });
             const rawData = response.data.body?.novel?.data || [];
-            const novels = rawData.map(item => ({
+            let mappedNovels = rawData.map(item => ({
                 id: item.id,
                 title: item.title,
                 x_restrict: item.xRestrict,
@@ -86,7 +113,33 @@ export default async function handler(req, res) {
                 text_length: item.textCount,
                 tags: item.tags || []
             }));
-            return res.status(200).json({ novels });
+
+            // 1ページ目の人気順指定の場合、人気の小説をマージ
+            if (orderStr === 'popular_d' && page == 1) {
+                const popularObj = response.data.body?.popular || {};
+                const popularRecent = popularObj.recent || [];
+                const popularPermanent = popularObj.permanent || [];
+                const popularItems = [...popularRecent, ...popularPermanent];
+                
+                const mappedPopular = popularItems.map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    x_restrict: item.xRestrict,
+                    user: { id: item.userId, name: item.userName },
+                    image_urls: {
+                        large: item.url
+                    },
+                    text_length: item.textCount,
+                    tags: item.tags || [],
+                    is_popular: true
+                }));
+
+                const seenIds = new Set(mappedPopular.map(x => x.id));
+                const filteredNormal = mappedNovels.filter(x => !seenIds.has(x.id));
+                mappedNovels = [...mappedPopular, ...filteredNormal];
+            }
+
+            return res.status(200).json({ novels: mappedNovels });
         }
 
         // 3. ランキング
