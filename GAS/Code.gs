@@ -169,6 +169,18 @@ function getUserNovels(userId, page) {
     return response.getContentText();
 }
 
+function getRelatedIllusts(illustId) {
+    const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
+    const response = UrlFetchApp.fetch(`${baseUrl}/api?type=related_illusts&id=${illustId}`, { muteHttpExceptions: true });
+    return response.getContentText();
+}
+
+function getRelatedNovels(novelId) {
+    const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
+    const response = UrlFetchApp.fetch(`${baseUrl}/api?type=related_novels&id=${novelId}`, { muteHttpExceptions: true });
+    return response.getContentText();
+}
+
 function getNovelText(id) {
     const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
     const response = UrlFetchApp.fetch(`${baseUrl}/api?type=novel_text&id=${id}`, { muteHttpExceptions: true });

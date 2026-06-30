@@ -433,6 +433,7 @@
         <!-- 4. お気に入り -->
         <div id="favView" style="display:none;">
             <div class="section-title">お気に入り作品</div>
+            <div id="favTagsList" class="sub-tabs-container" style="flex-wrap:wrap; margin-bottom:20px; border-bottom:none; gap:8px;"></div>
             <div class="grid" id="favGrid"></div>
         </div>
 
@@ -479,6 +480,9 @@
                 <button class="fav-btn" id="favActionBtn" onclick="toggleFavorite()">お気に入りに追加</button>
             </div>
             <div id="detailContent"></div>
+            <!-- 関連作品セクション -->
+            <div class="section-title" id="relatedSectionTitle" style="margin-top:40px; display:none;">関連作品</div>
+            <div class="grid" id="relatedGrid" style="margin-top:20px;"></div>
         </div>
     </div>
 
@@ -543,6 +547,12 @@
                     query.set('type', 'user_illusts');
                     query.set('id', params.id);
                     if (params.page) query.set('p', params.page);
+                } else if (params.action === 'related_illusts') {
+                    query.set('type', 'related_illusts');
+                    query.set('id', params.id);
+                } else if (params.action === 'related_novels') {
+                    query.set('type', 'related_novels');
+                    query.set('id', params.id);
                 }
                 return `/api?${query.toString()}`;
             }
@@ -972,6 +982,50 @@
                 } catch (err) { content.innerHTML = `<p style="color:red;">本文の読み込みに失敗しました。</p>`; }
                 finally { loading.style.display = 'none'; }
             }
+
+            // 関連作品の読み込み
+            loadRelatedWorks(item.id, type);
+        }
+
+        async function loadRelatedWorks(id, type) {
+            const titleEl = document.getElementById('relatedSectionTitle');
+            const gridEl = document.getElementById('relatedGrid');
+            
+            titleEl.style.display = 'none';
+            gridEl.innerHTML = '';
+            
+            try {
+                let data;
+                if (type === 'illust') {
+                    if (isGas) {
+                        const resText = await runGasServer('getRelatedIllusts', id);
+                        data = JSON.parse(resText);
+                    } else {
+                        const res = await fetch(getApiUrl({ action: 'related_illusts', id }));
+                        data = await res.json();
+                    }
+                    const list = data.illusts || [];
+                    if (list.length > 0) {
+                        titleEl.style.display = 'block';
+                        renderGridItems(list, gridEl, 'illust');
+                    }
+                } else {
+                    if (isGas) {
+                        const resText = await runGasServer('getRelatedNovels', id);
+                        data = JSON.parse(resText);
+                    } else {
+                        const res = await fetch(getApiUrl({ action: 'related_novels', id }));
+                        data = await res.json();
+                    }
+                    const list = data.novels || [];
+                    if (list.length > 0) {
+                        titleEl.style.display = 'block';
+                        renderGridItems(list, gridEl, 'novel');
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load related works:', e);
+            }
         }
 
         function searchByTag(tagName) {
@@ -1121,7 +1175,52 @@
             if (index > -1) favs.splice(index, 1); else favs.unshift(currentItem);
             localStorage.setItem('pixiv_favs', JSON.stringify(favs)); updateFavButtonState();
         }
-        function renderFavorites() { renderGridItems(getFavs(), document.getElementById('favGrid'), 'fav'); }
+        let activeFavTagFilter = null;
+        function renderFavorites(filterTag = null) {
+            activeFavTagFilter = filterTag;
+            const favs = getFavs();
+            
+            // お気に入り作品の全タグから頻出タグを集計 (上位15件)
+            const tagCounts = {};
+            favs.forEach(item => {
+                (item.tags || []).forEach(tag => {
+                    const name = typeof tag === 'string' ? tag : (tag.name || tag.tag);
+                    if (name) {
+                        tagCounts[name] = (tagCounts[name] || 0) + 1;
+                    }
+                });
+            });
+            
+            const topTags = Object.keys(tagCounts)
+                .sort((a, b) => tagCounts[b] - tagCounts[a])
+                .slice(0, 15);
+                
+            // タグフィルターの描画
+            const tagsListEl = document.getElementById('favTagsList');
+            if (favs.length === 0) {
+                tagsListEl.innerHTML = '';
+            } else {
+                let tagsHtml = `<span class="sub-tab ${!filterTag ? 'active' : ''}" onclick="renderFavorites(null)" style="padding:4px 10px; font-size:12px; margin-bottom:4px;">すべて</span>`;
+                topTags.forEach(tag => {
+                    const isActive = filterTag === tag;
+                    tagsHtml += `<span class="sub-tab ${isActive ? 'active' : ''}" onclick="renderFavorites('${tag}')" style="padding:4px 10px; font-size:12px; margin-bottom:4px;">#${tag} (${tagCounts[tag]})</span>`;
+                });
+                tagsListEl.innerHTML = tagsHtml;
+            }
+            
+            // 絞り込み処理
+            let filteredFavs = favs;
+            if (filterTag) {
+                filteredFavs = favs.filter(item => 
+                    (item.tags || []).some(tag => {
+                        const name = typeof tag === 'string' ? tag : (tag.name || tag.tag);
+                        return name === filterTag;
+                    })
+                );
+            }
+            
+            renderGridItems(filteredFavs, document.getElementById('favGrid'), 'fav');
+        }
 
         function saveSearchHistory(word, type) {
             let history = JSON.parse(localStorage.getItem('search_history')) || []; history = history.filter(h => !(h.word === word && h.type === type));

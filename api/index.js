@@ -317,7 +317,54 @@ export default async function handler(req, res) {
             return res.status(200).json({ novels, total });
         }
 
-        // 12. 画像バイナリ中継
+        // 12. 関連イラスト
+        if (type === 'related_illusts') {
+            const response = await axios.get(`https://www.pixiv.net/ajax/illust/${id}/recommend/init?limit=18`, {
+                headers: {
+                    ...webApiHeaders,
+                    'Referer': `https://www.pixiv.net/artworks/${id}`
+                }
+            });
+            const rawData = response.data.body?.illusts || [];
+            const illusts = rawData.map(item => ({
+                id: item.id,
+                title: item.title,
+                x_restrict: item.xRestrict,
+                user: { id: item.userId, name: item.userName },
+                image_urls: {
+                    square_medium: item.url,
+                    large: getLargeImageUrl(item.url)
+                },
+                tags: item.tags || [],
+                page_count: item.pageCount || 1
+            }));
+            return res.status(200).json({ illusts });
+        }
+
+        // 13. 関連小説
+        if (type === 'related_novels') {
+            const response = await axios.get(`https://www.pixiv.net/ajax/novel/${id}/recommend/init?limit=18`, {
+                headers: {
+                    ...webApiHeaders,
+                    'Referer': `https://www.pixiv.net/novel/show.php?id=${id}`
+                }
+            });
+            const rawData = response.data.body?.novels || [];
+            const novels = rawData.map(item => ({
+                id: item.id,
+                title: item.title,
+                x_restrict: item.xRestrict,
+                user: { id: item.userId, name: item.userName },
+                image_urls: {
+                    large: item.url
+                },
+                tags: item.tags || [],
+                text_length: item.textCount || 0
+            }));
+            return res.status(200).json({ novels });
+        }
+
+        // 14. 画像バイナリ中継
         if (type === 'image') {
             if (!url || url === 'undefined' || url === '') return res.status(400).json({ error: 'url パラメータが必要です。' });
             const response = await axios.get(url, {
