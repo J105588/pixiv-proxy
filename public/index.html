@@ -488,7 +488,7 @@
 
     <script>
         const isGas = window.location.hostname.includes('script.google.com') || window.location.hostname.includes('googleusercontent.com');
-        const GAS_URL = isGas ? window.location.href.split('?')[0] : '';
+        const GAS_URL = isGas ? '/*GAS_URL_PLACEHOLDER*/' : '';
         let currentType = 'illust', currentItem = null, previousView = 'home';
 
         // 状態管理用の変数 (検索用)
