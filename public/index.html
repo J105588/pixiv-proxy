@@ -36,6 +36,8 @@
             top: 0;
             z-index: 100;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .logo {
@@ -49,15 +51,14 @@
         .search-bar {
             display: flex;
             gap: 8px;
-            width: 100%;
-            max-width: 500px;
-            margin: 0 20px;
+            flex: 1;
+            max-width: 400px;
         }
 
         select,
         input,
         button {
-            padding: 10px 14px;
+            padding: 8px 12px;
             border: 1px solid #ccd5e0;
             border-radius: 8px;
             font-size: 14px;
@@ -82,22 +83,17 @@
 
         .nav-tabs {
             display: flex;
-            gap: 12px;
+            gap: 8px;
         }
 
         .tab-btn {
             background: #e5e9ef;
             color: var(--text-main);
             font-size: 13px;
-            padding: 8px 16px;
+            padding: 8px 14px;
             border-radius: 20px;
-            font-weight: normal;
-            cursor: pointer;
             border: none;
-        }
-
-        .tab-btn:hover {
-            background: #ccd5e0;
+            cursor: pointer;
         }
 
         .tab-btn.active {
@@ -122,7 +118,7 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
             gap: 16px;
         }
 
@@ -145,7 +141,6 @@
             aspect-ratio: 1/1;
             background: #eee;
             overflow: hidden;
-            position: relative;
         }
 
         .thumb-box img {
@@ -243,6 +238,9 @@
             margin-bottom: 16px;
             border-left: 4px solid var(--pixiv-blue);
             padding-left: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .list-box {
@@ -282,7 +280,7 @@
 <body>
 
     <header>
-        <a class="logo" onclick="switchTab('search')">pixiv</a>
+        <a class="logo" onclick="switchTab('home')">pixiv</a>
         <div class="search-bar">
             <select id="searchType">
                 <option value="illust">イラスト</option>
@@ -292,33 +290,61 @@
             <button onclick="startSearch()">検索</button>
         </div>
         <div class="nav-tabs">
-            <button class="tab-btn active" id="tab-search" onclick="switchTab('search')">検索一覧</button>
-            <button class="tab-btn" id="tab-fav" onclick="switchTab('fav')">お気に入り</button>
-            <button class="tab-btn" id="tab-history" onclick="switchTab('history')">履歴</button>
+            <button class="tab-btn active" id="tab-home" onclick="switchTab('home')">🏠 ホーム</button>
+            <button class="tab-btn" id="tab-rank" onclick="switchTab('rank')">🔥 ランキング</button>
+            <button class="tab-btn" id="tab-fav" onclick="switchTab('fav')">★ お気に入り</button>
+            <button class="tab-btn" id="tab-history" onclick="switchTab('history')">🕒 履歴</button>
         </div>
     </header>
 
     <div class="main-container">
-        <div id="loading" class="loading">制限コンテンツを安全にデコード中...</div>
+        <div id="loading" class="loading">🔒 制限コンテンツをデコード中...</div>
 
-        <div id="searchView">
+        <!-- 1. ホーム（おすすめ） -->
+        <div id="homeView">
+            <div class="section-title">✨ あなたへのおすすめイラスト</div>
+            <div class="grid" id="recommendGrid"></div>
+        </div>
+
+        <!-- 2. ランキング -->
+        <div id="rankView" style="display:none;">
+            <div class="section-title">
+                <span>🔥 デイリーランキング</span>
+                <select id="rankModeSelect" onchange="loadRanking()" style="padding:4px 8px; font-size:12px;">
+                    <option value="day">全年齢デイリー</option>
+                    <option value="day_male">男性人気</option>
+                    <option value="day_female">女性人気</option>
+                    <option value="day_r18">R-18 デイリー</option>
+                    <option value="day_male_r18">R-18 男性人気</option>
+                </select>
+            </div>
+            <div class="grid" id="rankGrid"></div>
+        </div>
+
+        <!-- 3. 検索結果 -->
+        <div id="searchView" style="display:none;">
             <div class="grid" id="resultGrid"></div>
         </div>
+
+        <!-- 4. お気に入り -->
         <div id="favView" style="display:none;">
-            <div class="section-title">お気に入り作品一覧</div>
+            <div class="section-title">★ お気に入り作品</div>
             <div class="grid" id="favGrid"></div>
         </div>
+
+        <!-- 5. 履歴 -->
         <div id="historyView" style="display:none;">
-            <div class="section-title">最近検索したキーワード</div>
+            <div class="section-title">🕒 最近検索したキーワード</div>
             <div class="list-box" id="searchHistoryList"></div>
-            <div class="section-title">最近閲覧した作品</div>
+            <div class="section-title">🕒 最近閲覧した作品</div>
             <div class="grid" id="readHistoryGrid"></div>
         </div>
 
+        <!-- 6. 詳細ビューア -->
         <div id="detailView" class="detail-view">
             <div class="action-bar">
                 <button class="back-btn" onclick="goBack()">← 戻る</button>
-                <button class="fav-btn" id="favActionBtn" onclick="toggleFavorite()">お気に入りに追加</button>
+                <button class="fav-btn" id="favActionBtn" onclick="toggleFavorite()">★ お気に入りに追加</button>
             </div>
             <div id="detailContent"></div>
         </div>
@@ -326,35 +352,70 @@
 
     <script>
         const GAS_URL = window.location.href.split('?')[0];
-        let currentType = 'illust', currentItem = null, previousView = 'search';
+        let currentType = 'illust', currentItem = null, previousView = 'home';
 
         window.onload = function () {
             if (!localStorage.getItem('pixiv_favs')) localStorage.setItem('pixiv_favs', JSON.stringify([]));
             if (!localStorage.getItem('search_history')) localStorage.setItem('search_history', JSON.stringify([]));
             if (!localStorage.getItem('read_history')) localStorage.setItem('read_history', JSON.stringify([]));
+            switchTab('home'); // 初回おすすめ読み込み
         };
 
-        function switchTab(viewName) {
-            document.getElementById('searchView').style.display = viewName === 'search' ? 'block' : 'none';
-            document.getElementById('favView').style.display = viewName === 'fav' ? 'block' : 'none';
-            document.getElementById('historyView').style.display = viewName === 'history' ? 'block' : 'none';
-            document.getElementById('detailView').style.display = 'none';
+        async function switchTab(viewName) {
+            const views = ['home', 'rank', 'search', 'fav', 'history', 'detail'];
+            views.forEach(v => {
+                const el = document.getElementById(`${v}View`);
+                if (el) el.style.display = (v === viewName) ? 'block' : 'none';
+            });
+
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`tab-${viewName}`).classList.add('active');
+            const activeTab = document.getElementById(`tab-${viewName}`);
+            if (activeTab) activeTab.classList.add('active');
+
+            if (viewName === 'home') loadRecommendations();
+            if (viewName === 'rank') loadRanking();
             if (viewName === 'fav') renderFavorites();
             if (viewName === 'history') renderHistory();
         }
 
-        function goBack() { document.getElementById('detailView').style.display = 'none'; switchTab(previousView); }
+        function goBack() { switchTab(previousView); }
 
+        // おすすめの読み込み
+        async function loadRecommendations() {
+            const grid = document.getElementById('recommendGrid'), loading = document.getElementById('loading');
+            if (grid.children.length > 0) return;
+            loading.style.display = 'block';
+            try {
+                const res = await fetch(`${GAS_URL}?type=custom&apiType=recommended`);
+                const data = await res.json();
+                renderGridItems(data.illusts, grid, 'illust');
+            } catch (e) { grid.innerHTML = '<p>読み込み失敗</p>'; }
+            finally { loading.style.display = 'none'; }
+        }
+
+        // ランキングの読み込み
+        async function loadRanking() {
+            const grid = document.getElementById('rankGrid'), loading = document.getElementById('loading');
+            const mode = document.getElementById('rankModeSelect').value;
+            grid.innerHTML = '';
+            loading.style.display = 'block';
+            try {
+                const res = await fetch(`${GAS_URL}?type=custom&apiType=ranking&mode=${mode}`);
+                const data = await res.json();
+                renderGridItems(data.illusts, grid, 'illust');
+            } catch (e) { grid.innerHTML = '<p>読み込み失敗</p>'; }
+            finally { loading.style.display = 'none'; }
+        }
+
+        // 検索機能
         async function startSearch(forcedWord = null) {
             switchTab('search'); previousView = 'search';
             const type = document.getElementById('searchType').value;
             const word = forcedWord || document.getElementById('queryInput').value.trim();
-            if (forcedWord) document.getElementById('queryInput').value = forcedWord;
+            if (forcedWord) document.getElementById('queryInput').value = word;
             const grid = document.getElementById('resultGrid'), loading = document.getElementById('loading');
 
-            if (!word) return alert('検索ワードを入力してください');
+            if (!word) return alert('キーワードを入力してください');
             currentType = type; grid.innerHTML = ''; loading.style.display = 'block';
             saveSearchHistory(word, type);
 
@@ -365,11 +426,13 @@
                 const items = type === 'illust' ? data.illusts : data.novels;
                 if (!items || items.length === 0) { grid.innerHTML = '<p>作品が見つかりませんでした。</p>'; return; }
                 renderGridItems(items, grid, type);
-            } catch (err) { grid.innerHTML = `<p style="color:red;">エラー: ${err.message}</p>`; } finally { loading.style.display = 'none'; }
+            } catch (err) { grid.innerHTML = `<p style="color:red;">エラー: ${err.message}</p>`; }
+            finally { loading.style.display = 'none'; }
         }
 
         function renderGridItems(items, targetGrid, type) {
             targetGrid.innerHTML = '';
+            if (!items) return;
             items.forEach(item => {
                 const card = document.createElement('div'); card.className = 'item-card';
                 let badgeHtml = '';
@@ -384,12 +447,12 @@
         }
 
         async function openDetail(item, type) {
-            if (document.getElementById('searchView').style.display === 'block') previousView = 'search';
-            else if (document.getElementById('favView').style.display === 'block') previousView = 'fav';
-            else if (document.getElementById('historyView').style.display === 'block') previousView = 'history';
-            document.getElementById('searchView').style.display = 'none'; document.getElementById('favView').style.display = 'none'; document.getElementById('historyView').style.display = 'none';
-            const detailView = document.getElementById('detailView'), content = document.getElementById('detailContent'), loading = document.getElementById('loading');
-            detailView.style.display = 'block'; content.innerHTML = '';
+            const activeView = ['home', 'rank', 'search', 'fav', 'history'].find(v => document.getElementById(`${v}View`).style.display === 'block');
+            if (activeView) previousView = activeView;
+
+            switchTab('detail');
+            const content = document.getElementById('detailContent'), loading = document.getElementById('loading');
+            content.innerHTML = '';
             currentItem = item; currentItem._type = type; currentType = type;
             updateFavButtonState(); saveReadHistory(item, type);
 
@@ -403,7 +466,8 @@
                     const res = await fetch(`${GAS_URL}?type=novel_body&id=${item.id}`);
                     const data = await res.json();
                     content.innerHTML = `<div class="view-card"><h1>${item.title}</h1><p style="color:var(--text-sub)">著者: ${item.user.name}</p><hr style="border:0; border-top:1px solid var(--border); margin:20px 0;"><div class="novel-body">${data.novel_text}</div></div>`;
-                } catch (err) { content.innerHTML = `<p style="color:red;">本文の読み込みに失敗しました。</p>`; } finally { loading.style.display = 'none'; }
+                } catch (err) { content.innerHTML = `<p style="color:red;">本文の読み込みに失敗しました。</p>`; }
+                finally { loading.style.display = 'none'; }
             }
         }
 
