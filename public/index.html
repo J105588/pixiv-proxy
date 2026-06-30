@@ -351,7 +351,7 @@
     </div>
 
     <script>
-        const isGas = window.location.hostname.includes('script.google.com');
+        const isGas = window.location.hostname.includes('script.google.com') || window.location.hostname.includes('googleusercontent.com');
         const GAS_URL = isGas ? window.location.href.split('?')[0] : '';
         let currentType = 'illust', currentItem = null, previousView = 'home';
 
