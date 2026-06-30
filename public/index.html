@@ -950,6 +950,8 @@
                             pagesList.innerHTML = '';
 
                             const pages = pagesData.pages || [];
+                            let loadedCount = 0;
+                            
                             pages.forEach((pageObj, index) => {
                                 const pageWrapper = document.createElement('div');
                                 pageWrapper.style.width = '100%';
@@ -968,6 +970,18 @@
 
                                 const imgEl = pageWrapper.querySelector(`#detailImg-${item.id}-${index}`);
                                 if (imgEl) {
+                                    imgEl.onload = () => {
+                                        loadedCount++;
+                                        if (loadedCount === pages.length) {
+                                            loadRelatedWorks(item.id, type);
+                                        }
+                                    };
+                                    imgEl.onerror = () => {
+                                        loadedCount++;
+                                        if (loadedCount === pages.length) {
+                                            loadRelatedWorks(item.id, type);
+                                        }
+                                    };
                                     setTimeout(() => {
                                         loadImageToElement(imgEl, pageObj.urls.large);
                                     }, index * 120);
@@ -1002,12 +1016,11 @@
                             <div class="novel-body">${parseNovelText(data.novel_text)}</div>
                         </div>
                     `;
+                    // 小説のロード完了後に関連作品を読み込む
+                    loadRelatedWorks(item.id, type);
                 } catch (err) { content.innerHTML = `<p style="color:red;">本文の読み込みに失敗しました。</p>`; }
                 finally { loading.style.display = 'none'; }
             }
-
-            // 関連作品の読み込み
-            loadRelatedWorks(item.id, type);
         }
 
         async function loadRelatedWorks(id, type) {
