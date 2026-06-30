@@ -293,32 +293,32 @@
         </div>
         <div class="nav-tabs">
             <button class="tab-btn active" id="tab-search" onclick="switchTab('search')">検索一覧</button>
-            <button class="tab-btn" id="tab-fav" onclick="switchTab('fav')">★ お気に入り</button>
-            <button class="tab-btn" id="tab-history" onclick="switchTab('history')">🕒 履歴</button>
+            <button class="tab-btn" id="tab-fav" onclick="switchTab('fav')">お気に入り</button>
+            <button class="tab-btn" id="tab-history" onclick="switchTab('history')">履歴</button>
         </div>
     </header>
 
     <div class="main-container">
-        <div id="loading" class="loading">🔒 制限コンテンツを安全にデコード中...</div>
+        <div id="loading" class="loading">制限コンテンツを安全にデコード中...</div>
 
         <div id="searchView">
             <div class="grid" id="resultGrid"></div>
         </div>
         <div id="favView" style="display:none;">
-            <div class="section-title">★ お気に入り作品一覧</div>
+            <div class="section-title">お気に入り作品一覧</div>
             <div class="grid" id="favGrid"></div>
         </div>
         <div id="historyView" style="display:none;">
-            <div class="section-title">🕒 最近検索したキーワード</div>
+            <div class="section-title">最近検索したキーワード</div>
             <div class="list-box" id="searchHistoryList"></div>
-            <div class="section-title">🕒 最近閲覧した作品</div>
+            <div class="section-title">最近閲覧した作品</div>
             <div class="grid" id="readHistoryGrid"></div>
         </div>
 
         <div id="detailView" class="detail-view">
             <div class="action-bar">
                 <button class="back-btn" onclick="goBack()">← 戻る</button>
-                <button class="fav-btn" id="favActionBtn" onclick="toggleFavorite()">★ お気に入りに追加</button>
+                <button class="fav-btn" id="favActionBtn" onclick="toggleFavorite()">お気に入りに追加</button>
             </div>
             <div id="detailContent"></div>
         </div>
