@@ -372,8 +372,8 @@
                 <option value="s_tc">タイトル・キャプション</option>
             </select>
             <select id="searchOrder">
-                <option value="date_d">新着順</option>
-                <option value="popular_d">人気順</option>
+                <option value="date_d">新しい順</option>
+                <option value="date">古い順</option>
             </select>
             <input type="text" id="queryInput" placeholder="キーワードを入力...">
             <button onclick="startSearch()">検索</button>
@@ -799,14 +799,7 @@
                 const card = document.createElement('div'); card.className = 'item-card';
                 let badgeHtml = '';
                 if (item.x_restrict === 1) badgeHtml = '<div class="badge">R-18</div>';
-                let badgeLeft = 50;
-                if (type === 'novel' || item._type === 'novel') {
-                    badgeHtml += `<div class="badge novel-tag" style="left:${badgeLeft}px;">小説</div>`;
-                    badgeLeft += 50;
-                }
-                if (item.is_popular) {
-                    badgeHtml += `<div class="badge popular-tag" style="left:${badgeLeft}px; background:#ff9900;">人気</div>`;
-                }
+                if (type === 'novel' || item._type === 'novel') badgeHtml += '<div class="badge novel-tag" style="left:50px;">小説</div>';
 
                 // 複数枚画像バッジ
                 const pageCount = item.page_count || item.pageCount || 1;
