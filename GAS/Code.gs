@@ -46,18 +46,29 @@ function doGet(e) {
 
     // 1. トップページのレンダリング
     if (!type) {
-        const response = UrlFetchApp.fetch(baseUrl + "/index.html");
-        let htmlText = response.getContentText();
+        const cache = CacheService.getScriptCache();
+        let htmlText = cache.get("index_html");
         
-        // GAS Web App の公開URLを動的に取得してHTML内に埋め込む
-        try {
-            const webAppUrl = ScriptApp.getService().getUrl();
-            htmlText = htmlText.replace(
-                /const GAS_URL\s*=\s*isGas\s*\?\s*window\.location\.href\.split\('\?'\)\[0\]\s*:\s*'';/, 
-                `const GAS_URL = "${webAppUrl}";`
-            );
-        } catch (e) {
-            console.error("Failed to get or inject Web App URL:", e.message);
+        if (!htmlText) {
+            try {
+                const response = UrlFetchApp.fetch(baseUrl + "/index.html");
+                htmlText = response.getContentText();
+                
+                // GAS Web App の公開URLを動的に取得してHTML内に埋め込む
+                const webAppUrl = ScriptApp.getService().getUrl();
+                htmlText = htmlText.replace(
+                    /const GAS_URL\s*=\s*isGas\s*\?\s*window\.location\.href\.split\('\?'\)\[0\]\s*:\s*'';/, 
+                    `const GAS_URL = "${webAppUrl}";`
+                );
+                
+                // スクリプトキャッシュに最大6時間保存
+                cache.put("index_html", htmlText, 21600);
+            } catch (e) {
+                console.error("Failed to fetch or inject Web App URL:", e.message);
+                if (!htmlText) {
+                    return HtmlService.createHtmlOutput("<p>システム一時エラー。しばらく経ってから再読み込みしてください。</p>");
+                }
+            }
         }
         
         return HtmlService.createHtmlOutput(htmlText)

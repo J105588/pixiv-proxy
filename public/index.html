@@ -570,6 +570,38 @@
             });
         }
 
+        // IntersectionObserver を使った超遅延画像ロード
+        let lazyImageObserver = null;
+        
+        function initLazyImageObserver() {
+            if ('IntersectionObserver' in window) {
+                lazyImageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            const origUrl = img.dataset.src;
+                            if (origUrl) {
+                                queueImageLoad(img, origUrl);
+                            }
+                            observer.unobserve(img);
+                        }
+                    });
+                }, {
+                    rootMargin: '120px 0px'
+                });
+            }
+        }
+        
+        function registerLazyImage(imgElement, origUrl) {
+            if (!origUrl) return;
+            imgElement.dataset.src = origUrl;
+            if (lazyImageObserver) {
+                lazyImageObserver.observe(imgElement);
+            } else {
+                queueImageLoad(imgElement, origUrl);
+            }
+        }
+
         // 画像並行ロード数管理キュー
         const imageLoadQueue = [];
         let activeImageLoads = 0;
@@ -621,6 +653,7 @@
             if (!localStorage.getItem('pixiv_favs')) localStorage.setItem('pixiv_favs', JSON.stringify([]));
             if (!localStorage.getItem('search_history')) localStorage.setItem('search_history', JSON.stringify([]));
             if (!localStorage.getItem('read_history')) localStorage.setItem('read_history', JSON.stringify([]));
+            initLazyImageObserver(); // 超遅延ロード監視初期化
             toggleSearchModeSelect(); // 検索オプション表示制御
             switchTab('home'); // 初回おすすめ読み込み
         };
@@ -864,7 +897,7 @@
 
                 setTimeout(() => {
                     const imgEl = card.querySelector(`#img-${item.id}`);
-                    if (imgEl) queueImageLoad(imgEl, origThumb);
+                    if (imgEl) registerLazyImage(imgEl, origThumb);
                 }, 0);
             });
         }
@@ -892,7 +925,7 @@
 
                 setTimeout(() => {
                     const imgEl = card.querySelector(`#${avatarId}`);
-                    if (imgEl) queueImageLoad(imgEl, user.avatar);
+                    if (imgEl) registerLazyImage(imgEl, user.avatar);
                 }, 0);
             });
         }
@@ -960,7 +993,7 @@
                                 pagesList.appendChild(pageWrapper);
 
                                 const imgEl = pageWrapper.querySelector(`#detailImg-${item.id}-${index}`);
-                                if (imgEl) queueImageLoad(imgEl, pageObj.urls.large);
+                                if (imgEl) registerLazyImage(imgEl, pageObj.urls.large);
                             });
                         } catch (e) {
                             console.error('Failed to load multi pages:', e);
@@ -983,7 +1016,7 @@
 
                     setTimeout(() => {
                         const imgEl = content.querySelector('#detailImg');
-                        if (imgEl) queueImageLoad(imgEl, bigImgUrl);
+                        if (imgEl) registerLazyImage(imgEl, bigImgUrl);
                     }, 0);
                 }
             } else {
@@ -1124,7 +1157,7 @@
                     commentEl.innerHTML = userDetail.comment || '紹介文はありません。';
 
                     if (userDetail.avatar) {
-                        queueImageLoad(avatar, userDetail.avatar);
+                        registerLazyImage(avatar, userDetail.avatar);
                     }
                 } catch (e) {
                     nameEl.innerText = '情報取得失敗';
