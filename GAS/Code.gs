@@ -47,7 +47,20 @@ function doGet(e) {
     // 1. トップページのレンダリング
     if (!type) {
         const response = UrlFetchApp.fetch(baseUrl + "/index.html");
-        return HtmlService.createHtmlOutput(response.getContentText())
+        let htmlText = response.getContentText();
+        
+        // GAS Web App の公開URLを動的に取得してHTML内に埋め込む
+        try {
+            const webAppUrl = ScriptApp.getService().getUrl();
+            htmlText = htmlText.replace(
+                /const GAS_URL\s*=\s*isGas\s*\?\s*window\.location\.href\.split\('\?'\)\[0\]\s*:\s*'';/, 
+                `const GAS_URL = "${webAppUrl}";`
+            );
+        } catch (e) {
+            console.error("Failed to get or inject Web App URL:", e.message);
+        }
+        
+        return HtmlService.createHtmlOutput(htmlText)
             .setTitle("pixiv Portal")
             .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
             .addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -71,11 +84,26 @@ function doGet(e) {
         return fetchFromVercel(vercelUrl);
     }
 
-    // 5. 画像バイナリ中継
+    // 5. 画像バイナリをBase64 JSONとして取得
     if (type === 'image') {
         const vercelUrl = `${baseUrl}/api?type=image&url=${encodeURIComponent(imageUrl)}`;
-        const response = UrlFetchApp.fetch(vercelUrl, { muteHttpExceptions: true });
-        return response.getBlob();
+        try {
+            const response = UrlFetchApp.fetch(vercelUrl, { muteHttpExceptions: true });
+            const code = response.getResponseCode();
+            if (code >= 400) {
+                return ContentService.createTextOutput(JSON.stringify({ error: `Vercel error ${code}` })).setMimeType(ContentService.MimeType.JSON);
+            }
+            const blob = response.getBlob();
+            const base64 = Utilities.base64Encode(blob.getBytes());
+            const contentType = response.getHeaders()['Content-Type'] || response.getHeaders()['content-type'] || 'image/jpeg';
+            
+            return ContentService.createTextOutput(JSON.stringify({
+                contentType: contentType,
+                base64: base64
+            })).setMimeType(ContentService.MimeType.JSON);
+        } catch (e) {
+            return ContentService.createTextOutput(JSON.stringify({ error: e.message })).setMimeType(ContentService.MimeType.JSON);
+        }
     }
 
     return ContentService.createTextOutput(JSON.stringify({ error: "Invalid Request" })).setMimeType(ContentService.MimeType.JSON);
