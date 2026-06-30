@@ -394,6 +394,18 @@
             }
         }
 
+        function runGasServer(funcName, ...args) {
+            return new Promise((resolve, reject) => {
+                if (typeof google === 'undefined' || !google.script || !google.script.run) {
+                    reject(new Error('google.script.run is not available'));
+                    return;
+                }
+                google.script.run
+                    .withSuccessHandler(result => resolve(result))
+                    .withFailureHandler(error => reject(error))[funcName](...args);
+            });
+        }
+
         async function loadImageToElement(imgElement, origUrl) {
             if (!origUrl) return;
             if (!isGas) {
@@ -402,8 +414,8 @@
             }
             imgElement.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100%' height='100%' fill='%23eee'/></svg>";
             try {
-                const res = await fetch(getApiUrl({ action: 'image', url: origUrl }));
-                const data = await res.json();
+                const resText = await runGasServer('getImageBase64', origUrl);
+                const data = JSON.parse(resText);
                 if (data.base64) {
                     imgElement.src = `data:${data.contentType || 'image/jpeg'};base64,${data.base64}`;
                 }
@@ -444,8 +456,14 @@
             if (grid.children.length > 0) return;
             loading.style.display = 'block';
             try {
-                const res = await fetch(getApiUrl({ action: 'recommended' }));
-                const data = await res.json();
+                let data;
+                if (isGas) {
+                    const resText = await runGasServer('getRecommended');
+                    data = JSON.parse(resText);
+                } else {
+                    const res = await fetch(getApiUrl({ action: 'recommended' }));
+                    data = await res.json();
+                }
                 renderGridItems(data.illusts, grid, 'illust');
             } catch (e) { grid.innerHTML = '<p>読み込み失敗</p>'; }
             finally { loading.style.display = 'none'; }
@@ -458,8 +476,14 @@
             grid.innerHTML = '';
             loading.style.display = 'block';
             try {
-                const res = await fetch(getApiUrl({ action: 'ranking', mode }));
-                const data = await res.json();
+                let data;
+                if (isGas) {
+                    const resText = await runGasServer('getRanking', mode);
+                    data = JSON.parse(resText);
+                } else {
+                    const res = await fetch(getApiUrl({ action: 'ranking', mode }));
+                    data = await res.json();
+                }
                 renderGridItems(data.illusts, grid, 'illust');
             } catch (e) { grid.innerHTML = '<p>読み込み失敗</p>'; }
             finally { loading.style.display = 'none'; }
@@ -479,8 +503,14 @@
 
             try {
                 const apiType = type === 'illust' ? 'search_illust' : 'search_novel';
-                const res = await fetch(getApiUrl({ action: 'search', apiType, word }));
-                const data = await res.json();
+                let data;
+                if (isGas) {
+                    const resText = await runGasServer('searchIllustOrNovel', apiType, word);
+                    data = JSON.parse(resText);
+                } else {
+                    const res = await fetch(getApiUrl({ action: 'search', apiType, word }));
+                    data = await res.json();
+                }
                 const items = type === 'illust' ? data.illusts : data.novels;
                 if (!items || items.length === 0) { grid.innerHTML = '<p>作品が見つかりませんでした。</p>'; return; }
                 renderGridItems(items, grid, type);
@@ -529,8 +559,14 @@
             } else {
                 loading.style.display = 'block';
                 try {
-                    const res = await fetch(getApiUrl({ action: 'novel_text', id: item.id }));
-                    const data = await res.json();
+                    let data;
+                    if (isGas) {
+                        const resText = await runGasServer('getNovelText', item.id);
+                        data = JSON.parse(resText);
+                    } else {
+                        const res = await fetch(getApiUrl({ action: 'novel_text', id: item.id }));
+                        data = await res.json();
+                    }
                     content.innerHTML = `<div class="view-card"><h1>${item.title}</h1><p style="color:var(--text-sub)">著者: ${item.user.name}</p><hr style="border:0; border-top:1px solid var(--border); margin:20px 0;"><div class="novel-body">${data.novel_text}</div></div>`;
                 } catch (err) { content.innerHTML = `<p style="color:red;">本文の読み込みに失敗しました。</p>`; }
                 finally { loading.style.display = 'none'; }

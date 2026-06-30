@@ -108,3 +108,48 @@ function doGet(e) {
 
     return ContentService.createTextOutput(JSON.stringify({ error: "Invalid Request" })).setMimeType(ContentService.MimeType.JSON);
 }
+
+// ==========================================
+// google.script.run から直接呼び出せるサーバーサイドAPI
+// ==========================================
+
+function getRecommended() {
+    const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
+    const response = UrlFetchApp.fetch(`${baseUrl}/api?type=recommended`, { muteHttpExceptions: true });
+    return response.getContentText();
+}
+
+function getRanking(mode) {
+    const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
+    const response = UrlFetchApp.fetch(`${baseUrl}/api?type=ranking&mode=${mode || ''}`, { muteHttpExceptions: true });
+    return response.getContentText();
+}
+
+function searchIllustOrNovel(apiType, word) {
+    const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
+    const response = UrlFetchApp.fetch(`${baseUrl}/api?type=${apiType}&word=${encodeURIComponent(word)}`, { muteHttpExceptions: true });
+    return response.getContentText();
+}
+
+function getNovelText(id) {
+    const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
+    const response = UrlFetchApp.fetch(`${baseUrl}/api?type=novel_text&id=${id}`, { muteHttpExceptions: true });
+    return response.getContentText();
+}
+
+function getImageBase64(imageUrl) {
+    const baseUrl = VERCEL_BASE_URL.replace(/\/$/, "");
+    try {
+        const response = UrlFetchApp.fetch(`${baseUrl}/api?type=image&url=${encodeURIComponent(imageUrl)}`, { muteHttpExceptions: true });
+        const code = response.getResponseCode();
+        if (code >= 400) {
+            return JSON.stringify({ error: `Vercel error ${code}` });
+        }
+        const blob = response.getBlob();
+        const base64 = Utilities.base64Encode(blob.getBytes());
+        const contentType = response.getHeaders()['Content-Type'] || response.getHeaders()['content-type'] || 'image/jpeg';
+        return JSON.stringify({ contentType: contentType, base64: base64 });
+    } catch (e) {
+        return JSON.stringify({ error: e.message });
+    }
+}
