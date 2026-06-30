@@ -570,33 +570,29 @@
             });
         }
 
-        // 画像並行ロード数管理キュー
-        const imageLoadQueue = [];
-        let activeImageLoads = 0;
-        const MAX_CONCURRENT_IMAGE_LOADS = 4;
+        // 画像並行ロード数管理キュー (デッドロック回避のためスタッガー遅延方式へ移行)
 
-        function queueImageLoad(imgElement, origUrl) {
-            if (!origUrl) return;
-            imageLoadQueue.push({ imgElement, origUrl });
-            processImageLoadQueue();
-        }
-
-        async function processImageLoadQueue() {
-            if (activeImageLoads >= MAX_CONCURRENT_IMAGE_LOADS || imageLoadQueue.length === 0) {
-                return;
-            }
+        function parseNovelText(text) {
+            if (!text) return '';
             
-            const { imgElement, origUrl } = imageLoadQueue.shift();
-            activeImageLoads++;
+            // 1. エスケープ (XSS対策)
+            let html = text.replace(/&/g, '&amp;')
+                           .replace(/</g, '&lt;')
+                           .replace(/>/g, '&gt;');
             
-            try {
-                await loadImageToElement(imgElement, origUrl);
-            } catch (e) {
-                console.error('Queue image load error:', e);
-            } finally {
-                activeImageLoads--;
-                processImageLoadQueue();
-            }
+            // 2. ルビの置換: [[rb:元文字 > よみがな]]
+            html = html.replace(/\[\[rb:\s*([^&]+?)\s*&gt;\s*([^\]]+?)\s*\]\]/g, '<ruby>$1<rt>$2</rt></ruby>');
+            
+            // 3. 改ページタグ [newpage] の置換
+            html = html.replace(/\[newpage\]/g, '<div class="novel-page-divider"><hr style="border:0; border-top:2px dashed var(--border); margin:40px 0;"></div>');
+            
+            // 4. 章見出し [chapter:見出し] の置換
+            html = html.replace(/\[chapter:\s*(.+?)\s*\]/g, '<h3 class="novel-chapter-title" style="margin-top:30px; font-size:18px; border-bottom:1px solid var(--border); padding-bottom:6px;">$1</h3>');
+            
+            // 5. 改行を <br>
+            html = html.replace(/\r?\n/g, '<br>');
+            
+            return html;
         }
 
         async function loadImageToElement(imgElement, origUrl) {
@@ -834,7 +830,7 @@
         function renderGridItems(items, targetGrid, type) {
             targetGrid.innerHTML = '';
             if (!items) return;
-            items.forEach(item => {
+            items.forEach((item, index) => {
                 const card = document.createElement('div'); card.className = 'item-card';
                 let badgeHtml = '';
                 if (item.x_restrict === 1) badgeHtml = '<div class="badge">R-18</div>';
@@ -864,15 +860,15 @@
 
                 setTimeout(() => {
                     const imgEl = card.querySelector(`#img-${item.id}`);
-                    if (imgEl) queueImageLoad(imgEl, origThumb);
-                }, 0);
+                    if (imgEl) loadImageToElement(imgEl, origThumb);
+                }, index * 80);
             });
         }
 
         function renderUserGridItems(users, targetGrid) {
             targetGrid.innerHTML = '';
             if (!users) return;
-            users.forEach(user => {
+            users.forEach((user, index) => {
                 const card = document.createElement('div'); card.className = 'item-card';
                 card.style.display = 'flex';
                 card.style.flexDirection = 'column';
@@ -892,8 +888,8 @@
 
                 setTimeout(() => {
                     const imgEl = card.querySelector(`#${avatarId}`);
-                    if (imgEl) queueImageLoad(imgEl, user.avatar);
-                }, 0);
+                    if (imgEl) loadImageToElement(imgEl, user.avatar);
+                }, index * 80);
             });
         }
 
@@ -907,6 +903,13 @@
             switchTab('detail');
             const content = document.getElementById('detailContent'), loading = document.getElementById('loading');
             content.innerHTML = '';
+
+            // 関連作品エリアのクリアと非表示
+            const relTitle = document.getElementById('relatedSectionTitle');
+            const relGrid = document.getElementById('relatedGrid');
+            if (relTitle) relTitle.style.display = 'none';
+            if (relGrid) relGrid.innerHTML = '';
+
             currentItem = item; currentItem._type = type; currentType = type;
             updateFavButtonState(); saveReadHistory(item, type);
 
@@ -964,7 +967,11 @@
                                 pagesList.appendChild(pageWrapper);
 
                                 const imgEl = pageWrapper.querySelector(`#detailImg-${item.id}-${index}`);
-                                if (imgEl) queueImageLoad(imgEl, pageObj.urls.large);
+                                if (imgEl) {
+                                    setTimeout(() => {
+                                        loadImageToElement(imgEl, pageObj.urls.large);
+                                    }, index * 120);
+                                }
                             });
                         }
                     } catch (e) {
@@ -992,7 +999,7 @@
                             </p>
                             <div style="margin-bottom:20px; display:flex; flex-wrap:wrap; gap:4px;">${tagsHtml}</div>
                             <hr style="border:0; border-top:1px solid var(--border); margin:20px 0;">
-                            <div class="novel-body">${data.novel_text}</div>
+                            <div class="novel-body">${parseNovelText(data.novel_text)}</div>
                         </div>
                     `;
                 } catch (err) { content.innerHTML = `<p style="color:red;">本文の読み込みに失敗しました。</p>`; }
@@ -1111,7 +1118,7 @@
                     commentEl.innerHTML = userDetail.comment || '紹介文はありません。';
 
                     if (userDetail.avatar) {
-                        queueImageLoad(avatar, userDetail.avatar);
+                        loadImageToElement(avatar, userDetail.avatar);
                     }
                 } catch (e) {
                     nameEl.innerText = '情報取得失敗';
