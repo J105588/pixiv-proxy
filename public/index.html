@@ -290,26 +290,26 @@
             <button onclick="startSearch()">検索</button>
         </div>
         <div class="nav-tabs">
-            <button class="tab-btn active" id="tab-home" onclick="switchTab('home')">🏠 ホーム</button>
-            <button class="tab-btn" id="tab-rank" onclick="switchTab('rank')">🔥 ランキング</button>
-            <button class="tab-btn" id="tab-fav" onclick="switchTab('fav')">★ お気に入り</button>
-            <button class="tab-btn" id="tab-history" onclick="switchTab('history')">🕒 履歴</button>
+            <button class="tab-btn active" id="tab-home" onclick="switchTab('home')">ホーム</button>
+            <button class="tab-btn" id="tab-rank" onclick="switchTab('rank')">ランキング</button>
+            <button class="tab-btn" id="tab-fav" onclick="switchTab('fav')">お気に入り</button>
+            <button class="tab-btn" id="tab-history" onclick="switchTab('history')">履歴</button>
         </div>
     </header>
 
     <div class="main-container">
-        <div id="loading" class="loading">🔒 制限コンテンツをデコード中...</div>
+        <div id="loading" class="loading">制限コンテンツをデコード中...</div>
 
         <!-- 1. ホーム（おすすめ） -->
         <div id="homeView">
-            <div class="section-title">✨ あなたへのおすすめイラスト</div>
+            <div class="section-title">あなたへのおすすめイラスト</div>
             <div class="grid" id="recommendGrid"></div>
         </div>
 
         <!-- 2. ランキング -->
         <div id="rankView" style="display:none;">
             <div class="section-title">
-                <span>🔥 デイリーランキング</span>
+                <span>デイリーランキング</span>
                 <select id="rankModeSelect" onchange="loadRanking()" style="padding:4px 8px; font-size:12px;">
                     <option value="day">全年齢デイリー</option>
                     <option value="day_male">男性人気</option>
@@ -328,15 +328,15 @@
 
         <!-- 4. お気に入り -->
         <div id="favView" style="display:none;">
-            <div class="section-title">★ お気に入り作品</div>
+            <div class="section-title">お気に入り作品</div>
             <div class="grid" id="favGrid"></div>
         </div>
 
         <!-- 5. 履歴 -->
         <div id="historyView" style="display:none;">
-            <div class="section-title">🕒 最近検索したキーワード</div>
+            <div class="section-title">最近検索したキーワード</div>
             <div class="list-box" id="searchHistoryList"></div>
-            <div class="section-title">🕒 最近閲覧した作品</div>
+            <div class="section-title">最近閲覧した作品</div>
             <div class="grid" id="readHistoryGrid"></div>
         </div>
 
@@ -344,15 +344,55 @@
         <div id="detailView" class="detail-view">
             <div class="action-bar">
                 <button class="back-btn" onclick="goBack()">← 戻る</button>
-                <button class="fav-btn" id="favActionBtn" onclick="toggleFavorite()">★ お気に入りに追加</button>
+                <button class="fav-btn" id="favActionBtn" onclick="toggleFavorite()">お気に入りに追加</button>
             </div>
             <div id="detailContent"></div>
         </div>
     </div>
 
     <script>
-        const GAS_URL = window.location.href.split('?')[0];
+        const isGas = window.location.hostname.includes('script.google.com');
+        const GAS_URL = isGas ? window.location.href.split('?')[0] : '';
         let currentType = 'illust', currentItem = null, previousView = 'home';
+
+        function getApiUrl(params) {
+            const query = new URLSearchParams();
+            if (isGas) {
+                if (params.action === 'recommended' || params.action === 'ranking') {
+                    query.set('type', 'custom');
+                    query.set('apiType', params.action);
+                    if (params.mode) query.set('mode', params.mode);
+                } else if (params.action === 'search') {
+                    query.set('type', 'search');
+                    query.set('apiType', params.apiType);
+                    query.set('word', params.word);
+                } else if (params.action === 'novel_text') {
+                    query.set('type', 'novel_body');
+                    query.set('id', params.id);
+                } else if (params.action === 'image') {
+                    query.set('type', 'image');
+                    query.set('url', params.url);
+                }
+                return `${GAS_URL}?${query.toString()}`;
+            } else {
+                if (params.action === 'recommended') {
+                    query.set('type', 'recommended');
+                } else if (params.action === 'ranking') {
+                    query.set('type', 'ranking');
+                    if (params.mode) query.set('mode', params.mode);
+                } else if (params.action === 'search') {
+                    query.set('type', params.apiType);
+                    query.set('word', params.word);
+                } else if (params.action === 'novel_text') {
+                    query.set('type', 'novel_text');
+                    query.set('id', params.id);
+                } else if (params.action === 'image') {
+                    query.set('type', 'image');
+                    query.set('url', params.url);
+                }
+                return `/api?${query.toString()}`;
+            }
+        }
 
         window.onload = function () {
             if (!localStorage.getItem('pixiv_favs')) localStorage.setItem('pixiv_favs', JSON.stringify([]));
@@ -386,7 +426,7 @@
             if (grid.children.length > 0) return;
             loading.style.display = 'block';
             try {
-                const res = await fetch(`${GAS_URL}?type=custom&apiType=recommended`);
+                const res = await fetch(getApiUrl({ action: 'recommended' }));
                 const data = await res.json();
                 renderGridItems(data.illusts, grid, 'illust');
             } catch (e) { grid.innerHTML = '<p>読み込み失敗</p>'; }
@@ -400,7 +440,7 @@
             grid.innerHTML = '';
             loading.style.display = 'block';
             try {
-                const res = await fetch(`${GAS_URL}?type=custom&apiType=ranking&mode=${mode}`);
+                const res = await fetch(getApiUrl({ action: 'ranking', mode }));
                 const data = await res.json();
                 renderGridItems(data.illusts, grid, 'illust');
             } catch (e) { grid.innerHTML = '<p>読み込み失敗</p>'; }
@@ -421,7 +461,7 @@
 
             try {
                 const apiType = type === 'illust' ? 'search_illust' : 'search_novel';
-                const res = await fetch(`${GAS_URL}?type=search&apiType=${apiType}&word=${encodeURIComponent(word)}`);
+                const res = await fetch(getApiUrl({ action: 'search', apiType, word }));
                 const data = await res.json();
                 const items = type === 'illust' ? data.illusts : data.novels;
                 if (!items || items.length === 0) { grid.innerHTML = '<p>作品が見つかりませんでした。</p>'; return; }
@@ -439,7 +479,7 @@
                 if (item.x_restrict === 1) badgeHtml = '<div class="badge">R-18</div>';
                 if (type === 'novel' || item._type === 'novel') badgeHtml += '<div class="badge novel-tag" style="left:50px;">小説</div>';
                 const origThumb = (type === 'illust' || item._type === 'illust') ? item.image_urls.square_medium : item.image_urls.large;
-                const proxyThumb = `${GAS_URL}?type=image&url=${encodeURIComponent(origThumb)}`;
+                const proxyThumb = getApiUrl({ action: 'image', url: origThumb });
                 card.innerHTML = `${badgeHtml}<div class="thumb-box"><img src="${proxyThumb}" loading="lazy"></div><div class="item-info"><div class="item-title">${item.title}</div><div class="item-author">by ${item.user.name}</div></div>`;
                 card.onclick = () => openDetail(item, item._type || type);
                 targetGrid.appendChild(card);
@@ -458,12 +498,12 @@
 
             if (type === 'illust') {
                 const bigImgUrl = item.meta_single_page.original_image_url || item.image_urls.large;
-                const proxyBigUrl = `${GAS_URL}?type=image&url=${encodeURIComponent(bigImgUrl)}`;
+                const proxyBigUrl = getApiUrl({ action: 'image', url: bigImgUrl });
                 content.innerHTML = `<div class="view-card big-img"><h1>${item.title}</h1><p style="color:var(--text-sub)">ユーザー: ${item.user.name}</p><img src="${proxyBigUrl}" referrerpolicy="no-referrer"><p style="text-align:left; white-space:pre-wrap; margin-top:20px;">${item.caption}</p></div>`;
             } else {
                 loading.style.display = 'block';
                 try {
-                    const res = await fetch(`${GAS_URL}?type=novel_body&id=${item.id}`);
+                    const res = await fetch(getApiUrl({ action: 'novel_text', id: item.id }));
                     const data = await res.json();
                     content.innerHTML = `<div class="view-card"><h1>${item.title}</h1><p style="color:var(--text-sub)">著者: ${item.user.name}</p><hr style="border:0; border-top:1px solid var(--border); margin:20px 0;"><div class="novel-body">${data.novel_text}</div></div>`;
                 } catch (err) { content.innerHTML = `<p style="color:red;">本文の読み込みに失敗しました。</p>`; }
